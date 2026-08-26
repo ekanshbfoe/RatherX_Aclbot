@@ -2,9 +2,11 @@ import asyncio
 import time
 import logging
 import itertools
+from functools import wraps
 from database.questions import get_question_by_id
+from database.supabase_client import supabase
 from dataclasses import dataclass, field
-from typing import Set, Dict, Optional
+from typing import Set, Dict, Optional, Any
 
 log = logging.getLogger(__name__)
 
@@ -56,50 +58,128 @@ async def cleanup_stale_sessions(max_age_seconds: int = 1800):
 
 # ----------------- GLOBAL & LOCAL HISTORY & MATCHING -----------------
 
-# global_history: Dict[user_id, {"name": str, "username": str, "votes": {question_id: str}}]
-global_history: Dict[int, dict] = {}
-# local_history: Dict[chat_instance, Dict[user_id, {"name": str, "username": str, "votes": {question_id: str}}]]
-local_history: Dict[str, Dict[int, dict]] = {}
-# chat_id_to_instance: Maps standard group chat_id to the hidden chat_instance
-chat_id_to_instance: Dict[int, str] = {}
+# ----------------- GLOBAL & LOCAL HISTORY & MATCHING -----------------
 
-def record_user_vote(user_id: int, user_name: str, question_id: str, vote_choice: str, chat_instance: Optional[str] = None, username: Optional[str] = None):
-    # Global Tracking
-    if user_id not in global_history:
-        global_history[user_id] = {"name": user_name, "username": username, "votes": {}}
-        
-    global_history[user_id]["name"] = user_name
-    if username:
-        global_history[user_id]["username"] = username
-    global_history[user_id]["votes"][question_id] = vote_choice
+def with_retry(max_retries=3, initial_delay=1, fallback_return=None):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            delay = initial_delay
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        log.error(f"DB Error {func.__name__} (Final Attempt {attempt + 1}): {e}")
+                        return fallback_return
+                    log.warning(f"DB Error {func.__name__} (Attempt {attempt + 1}): {e}. Retrying in {delay}s...")
+                    await asyncio.sleep(delay)
+                    delay *= 2
+        return wrapper
+    return decorator
+
+@with_retry(fallback_return=None)
+async def map_chat_instance(chat_id: int, chat_instance: str):
+    """Maps a standard Telegram chat_id to a hidden chat_instance string."""
+    if not supabase: return
+    await asyncio.to_thread(
+        lambda: supabase.table("rather_chat_mappings").upsert(
+            {"chat_id": chat_id, "chat_instance": chat_instance}
+        ).execute()
+    )
+
+@with_retry(fallback_return=None)
+async def get_chat_instance(chat_id: int) -> Optional[str]:
+    """Retrieves the chat_instance for a given chat_id."""
+    if not supabase: return None
+    res = await asyncio.to_thread(
+        lambda: supabase.table("rather_chat_mappings").select("chat_instance").eq("chat_id", chat_id).execute()
+    )
+    if res.data:
+        return res.data[0]["chat_instance"]
+    return None
+
+@with_retry(fallback_return=None)
+async def record_user_vote(user_id: int, user_name: str, question_id: str, vote_choice: str, chat_instance: Optional[str] = None, username: Optional[str] = None):
+    """Records a vote into Supabase globally, and locally if chat_instance is provided."""
+    if not supabase: return
+    # 1. Sequential Execution: Await User Upsert first to prevent Foreign Key constraint violation
+    await asyncio.to_thread(
+        lambda: supabase.table("rather_users").upsert(
+            {"user_id": user_id, "first_name": user_name, "username": username},
+            on_conflict="user_id"
+        ).execute()
+    )
     
-    # Local Tracking
-    if chat_instance is not None:
-        if chat_instance not in local_history:
-            local_history[chat_instance] = {}
-        if user_id not in local_history[chat_instance]:
-            local_history[chat_instance][user_id] = {"name": user_name, "username": username, "votes": {}}
-        local_history[chat_instance][user_id]["name"] = user_name
-        if username:
-            local_history[chat_instance][user_id]["username"] = username
-        local_history[chat_instance][user_id]["votes"][question_id] = vote_choice
+    # 2. Parallel Vote Upserts (after user exists)
+    tasks = [
+        asyncio.to_thread(
+            lambda: supabase.table("rather_votes_global").upsert(
+                {"user_id": user_id, "question_id": question_id, "vote_choice": vote_choice},
+                on_conflict="user_id, question_id"
+            ).execute()
+        )
+    ]
+    
+    # Upsert Local Vote
+    if chat_instance:
+        tasks.append(
+            asyncio.to_thread(
+                lambda: supabase.table("rather_votes_local").upsert(
+                    {"chat_instance": chat_instance, "user_id": user_id, "question_id": question_id, "vote_choice": vote_choice},
+                    on_conflict="chat_instance, user_id, question_id"
+                ).execute()
+            )
+        )
+        
+    await asyncio.gather(*tasks)
 
-def calculate_couples(scope: str, identifier = None) -> list:
+@with_retry(fallback_return={})
+async def get_global_history_dict() -> dict:
+    if not supabase: return {}
+    res = await asyncio.to_thread(
+        lambda: supabase.table("rather_votes_global").select("user_id, question_id, vote_choice, rather_users(first_name, username)").execute()
+    )
+    history = {}
+    for row in res.data:
+        uid = row["user_id"]
+        if uid not in history:
+            u = row.get("rather_users") or {}
+            history[uid] = {"name": u.get("first_name", "Unknown"), "username": u.get("username"), "votes": {}}
+        history[uid]["votes"][row["question_id"]] = row["vote_choice"]
+    return history
+
+@with_retry(fallback_return={})
+async def get_local_history_dict(chat_instance: str) -> dict:
+    if not supabase: return {}
+    res = await asyncio.to_thread(
+        lambda: supabase.table("rather_votes_local").select("user_id, question_id, vote_choice, rather_users(first_name, username)").eq("chat_instance", chat_instance).execute()
+    )
+    history = {}
+    for row in res.data:
+        uid = row["user_id"]
+        if uid not in history:
+            u = row.get("rather_users") or {}
+            history[uid] = {"name": u.get("first_name", "Unknown"), "username": u.get("username"), "votes": {}}
+        history[uid]["votes"][row["question_id"]] = row["vote_choice"]
+    return history
+
+async def calculate_couples(scope: str, identifier = None) -> list:
     if scope == "local":
-        if identifier not in local_history:
+        users_dict = await get_local_history_dict(identifier)
+        if not users_dict:
             return []
-        users_dict = local_history[identifier]
         user_ids = list(users_dict.keys())
         pairs = itertools.combinations(user_ids, 2)
     elif scope == "personal":
-        users_dict = global_history
+        users_dict = await get_global_history_dict()
         user_ids = list(users_dict.keys())
         if identifier not in user_ids:
             return []
         other_users = [u for u in user_ids if u != identifier]
         pairs = [(identifier, other) for other in other_users]
     else: # global
-        users_dict = global_history
+        users_dict = await get_global_history_dict()
         user_ids = list(users_dict.keys())
         pairs = itertools.combinations(user_ids, 2)
     

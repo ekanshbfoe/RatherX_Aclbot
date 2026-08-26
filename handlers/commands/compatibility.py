@@ -1,6 +1,6 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from services.game_session import chat_id_to_instance, local_history, calculate_specific_compatibility
+from services.game_session import get_chat_instance, get_local_history_dict, calculate_specific_compatibility
 from utils.formatting import format_compatibility
 
 router = Router()
@@ -12,9 +12,9 @@ async def cmd_compatibility(message: types.Message):
         return
         
     chat_id = message.chat.id
-    chat_instance = chat_id_to_instance.get(chat_id)
+    chat_instance = await get_chat_instance(chat_id)
     
-    if not chat_instance or chat_instance not in local_history:
+    if not chat_instance:
         await message.reply("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
         return
         
@@ -29,7 +29,11 @@ async def cmd_compatibility(message: types.Message):
     target1, target2 = target_usernames
     
     # Search local history for user_ids matching the usernames
-    users_dict = local_history[chat_instance]
+    users_dict = await get_local_history_dict(chat_instance)
+    if not users_dict:
+        await message.reply("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
+        return
+        
     uid1 = None
     uid2 = None
     

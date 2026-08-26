@@ -19,7 +19,7 @@ async def process_xboard(callback_query: types.CallbackQuery):
     else:
         identifier = None
         
-    couples = calculate_couples(scope, identifier)
+    couples = await calculate_couples(scope, identifier)
     text = format_interactive_couple_board(couples, scope.capitalize())
     
     try:

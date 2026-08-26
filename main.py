@@ -56,7 +56,7 @@ async def main():
     # Start polling
     logging.info("Starting bot...")
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, allowed_updates=["message", "inline_query", "callback_query"])
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -3,8 +3,11 @@ import time
 from aiogram import Router, types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_question_by_id
-from services.game_session import get_session, remove_session, create_session, record_user_vote, chat_id_to_instance
+from services.game_session import get_session, remove_session, create_session, record_user_vote, map_chat_instance
 from utils.formatting import format_question_text, safe_edit_message_text
+
+# Keep strong references to background tasks to prevent garbage collection
+background_tasks = set()
 
 router = Router()
 
@@ -112,11 +115,15 @@ async def process_vote(callback_query: types.CallbackQuery):
         
         # Record vote for Global (and Local if applicable) Leaderboard
         username = callback_query.from_user.username
-        record_user_vote(user_id, first_name, question_id, vote_choice, chat_instance=callback_query.chat_instance, username=username)
+        task1 = asyncio.create_task(record_user_vote(user_id, first_name, question_id, vote_choice, chat_instance=callback_query.chat_instance, username=username))
+        background_tasks.add(task1)
+        task1.add_done_callback(background_tasks.discard)
         
         # Map chat_id to chat_instance for local commands (/mylove, /compatibility)
         if not is_inline and callback_query.message.chat.type in ["group", "supergroup"]:
-            chat_id_to_instance[callback_query.message.chat.id] = callback_query.chat_instance
+            task2 = asyncio.create_task(map_chat_instance(callback_query.message.chat.id, callback_query.chat_instance))
+            background_tasks.add(task2)
+            task2.add_done_callback(background_tasks.discard)
         
         # Check chat type to determine execution flow
         is_private = not is_inline and callback_query.message.chat.type == "private"
