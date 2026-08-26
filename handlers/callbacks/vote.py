@@ -3,7 +3,7 @@ import time
 from aiogram import Router, types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_question_by_id
-from services.game_session import get_session, remove_session
+from services.game_session import get_session, remove_session, create_session
 from utils.formatting import format_question_text, safe_edit_message_text
 
 router = Router()
@@ -47,14 +47,10 @@ async def resolve_game(game_id: str, message: types.Message | None, inline_messa
         is_nsfw=session.is_nsfw
     )
 
-    # Add "Next Question" button only for non-inline games
+    # Add inline "Next Question" button for all games
     builder = InlineKeyboardBuilder()
-    if not inline_message_id:
-        cb_data = "next_nsfw" if session.is_nsfw else "next_sfw"
-        builder.button(text="➡️ Next Question", callback_data=cb_data)
-        reply_markup = builder.as_markup()
-    else:
-        reply_markup = None
+    builder.button(text="➡️ Next Question", switch_inline_query_current_chat="")
+    reply_markup = builder.as_markup()
         
     if message:
         await safe_edit_message_text(message, text, reply_markup)
@@ -72,23 +68,26 @@ async def game_timer(game_id: str, message: types.Message | None, inline_message
     await asyncio.sleep(15)
     await resolve_game(game_id, message, inline_message_id, bot)
 
-@router.callback_query(lambda c: c.data and c.data.startswith('vote_'))
+@router.callback_query(lambda c: c.data and c.data.startswith('vote:'))
 async def process_vote(callback_query: types.CallbackQuery):
-    data_parts = callback_query.data.split('_')
-    vote_choice = data_parts[1] # 'a' or 'b'
-    question_id = "_".join(data_parts[2:]) # e.g. 'sfw_0001'
+    data_parts = callback_query.data.split(':')
+    # vote:<category>:<question_id>:<color>
+    category = data_parts[1]
+    question_id = data_parts[2]
+    vote_choice = data_parts[3]
     
-    # Determine game_id
+    # Determine unified game_id
     is_inline = callback_query.inline_message_id is not None
     if is_inline:
-        game_id = f"inline_{callback_query.inline_message_id}"
+        game_id = callback_query.inline_message_id
     else:
-        game_id = f"{callback_query.message.chat.id}_{callback_query.message.message_id}"
+        game_id = f"{callback_query.message.chat.id}:{callback_query.message.message_id}"
         
     session = get_session(game_id)
     if not session:
-        await callback_query.answer("Game has ended!", show_alert=True)
-        return
+        # Initialize session on the fly for inline queries or restarted bot cache misses
+        is_nsfw = (category == "nsfw")
+        session = create_session(game_id, question_id, is_nsfw=is_nsfw)
         
     user_id = callback_query.from_user.id
     first_name = callback_query.from_user.first_name
@@ -161,8 +160,8 @@ async def process_vote(callback_query: types.CallbackQuery):
         )
         
         builder = InlineKeyboardBuilder()
-        builder.button(text="🔵 Option 1", callback_data=f"vote_a_{question.id}")
-        builder.button(text="🔴 Option 2", callback_data=f"vote_b_{question.id}")
+        builder.button(text="🔵", callback_data=f"vote:{category}:{question.id}:a")
+        builder.button(text="🔴", callback_data=f"vote:{category}:{question.id}:b")
         builder.adjust(2)
         
         if not is_inline:

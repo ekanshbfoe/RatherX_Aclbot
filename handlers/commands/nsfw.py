@@ -16,8 +16,8 @@ async def cmd_nsfw(message: types.Message):
 
     # Build initial buttons
     builder = InlineKeyboardBuilder()
-    builder.button(text="🔵", callback_data=f"vote_a_{question.id}")
-    builder.button(text="🔴", callback_data=f"vote_b_{question.id}")
+    builder.button(text="🔵", callback_data=f"vote:nsfw:{question.id}:a")
+    builder.button(text="🔴", callback_data=f"vote:nsfw:{question.id}:b")
     builder.adjust(2)
 
     text = format_question_text(
@@ -28,5 +28,5 @@ async def cmd_nsfw(message: types.Message):
 
     msg = await message.reply(text, reply_markup=builder.as_markup(), parse_mode="HTML")
     
-    game_id = f"{message.chat.id}_{msg.message_id}"
+    game_id = f"{message.chat.id}:{msg.message_id}"
     create_session(game_id, question.id, is_nsfw=True)

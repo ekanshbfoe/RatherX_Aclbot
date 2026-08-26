@@ -1,57 +1,67 @@
-import uuid
-import random
 from aiogram import Router, types
-from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
+from aiogram.types import InlineQueryResultArticle, InputTextMessageContent, InlineQueryResultsButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from database.questions import SFW_QUESTIONS
-from services.game_session import create_session
+from database.questions import get_random_question
 from utils.formatting import format_question_text
 
 router = Router()
 
 @router.inline_query()
 async def inline_query_handler(inline_query: types.InlineQuery):
-    if not SFW_QUESTIONS:
-        return
-        
-    # Get 5 random SFW questions for the inline menu
-    sampled = random.sample(SFW_QUESTIONS, min(5, len(SFW_QUESTIONS)))
     results = []
     
-    for q in sampled:
-        builder = InlineKeyboardBuilder()
-        builder.button(text="🔵 Option 1", callback_data=f"vote_a_{q.id}")
-        builder.button(text="🔴 Option 2", callback_data=f"vote_b_{q.id}")
-        builder.adjust(2)
+    # 1. SFW Question Article
+    sfw_q = get_random_question(nsfw=False)
+    if sfw_q:
+        builder_sfw = InlineKeyboardBuilder()
+        builder_sfw.button(text="🔵", callback_data=f"vote:sfw:{sfw_q.id}:a")
+        builder_sfw.button(text="🔴", callback_data=f"vote:sfw:{sfw_q.id}:b")
+        builder_sfw.adjust(2)
         
-        text = format_question_text(
-            q.option_blue, 
-            q.option_red
-        )
+        text_sfw = format_question_text(sfw_q.option_blue, sfw_q.option_red)
         
         results.append(
             InlineQueryResultArticle(
-                id=q.id,
-                title=f"Would You Rather: {q.option_blue} OR {q.option_red}",
-                description="Challenge a friend!",
+                id="article_sfw",
+                title="Get Question",
+                description="Play a standard Would You Rather question",
+                thumbnail_url="https://placehold.co/100x100/blue/white?text=?",
                 input_message_content=InputTextMessageContent(
-                    message_text=text,
+                    message_text=text_sfw,
                     parse_mode="HTML"
                 ),
-                reply_markup=builder.as_markup()
+                reply_markup=builder_sfw.as_markup()
             )
         )
         
-    # Cache time is short so they get new random questions often
-    await inline_query.answer(results, cache_time=5, is_personal=True)
-
-@router.chosen_inline_result()
-async def chosen_inline_result_handler(chosen_result: types.ChosenInlineResult):
-    # The result_id is the question ID, which we set in InlineQueryResultArticle
-    question_id = chosen_result.result_id
-    inline_message_id = chosen_result.inline_message_id
-    
-    if inline_message_id:
-        game_id = f"inline_{inline_message_id}"
-        is_nsfw = question_id.startswith("nsfw")
-        create_session(game_id, question_id, is_nsfw=is_nsfw)
+    # 2. NSFW Question Article
+    nsfw_q = get_random_question(nsfw=True)
+    if nsfw_q:
+        builder_nsfw = InlineKeyboardBuilder()
+        builder_nsfw.button(text="🔵", callback_data=f"vote:nsfw:{nsfw_q.id}:a")
+        builder_nsfw.button(text="🔴", callback_data=f"vote:nsfw:{nsfw_q.id}:b")
+        builder_nsfw.adjust(2)
+        
+        text_nsfw = format_question_text(nsfw_q.option_blue, nsfw_q.option_red, is_nsfw=True)
+        
+        results.append(
+            InlineQueryResultArticle(
+                id="article_nsfw",
+                title="Get Question (18+)",
+                description="Play an NSFW 18+ question",
+                thumbnail_url="https://placehold.co/100x100/red/white?text=18%2B",
+                input_message_content=InputTextMessageContent(
+                    message_text=text_nsfw,
+                    parse_mode="HTML"
+                ),
+                reply_markup=builder_nsfw.as_markup()
+            )
+        )
+        
+    # cache_time=0 and is_personal=True ensures they get fresh random questions every time they query
+    await inline_query.answer(
+        results, 
+        cache_time=0, 
+        is_personal=True,
+        button=InlineQueryResultsButton(text="Would You Rather え", start_parameter="inline_promo")
+    )
