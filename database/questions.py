@@ -1,37 +1,78 @@
+import json
 import random
+import os
+import logging
 from dataclasses import dataclass
-from typing import List
+
+log = logging.getLogger(__name__)
 
 @dataclass
 class Question:
     id: str
-    option_a: str
-    option_b: str
+    question: str
+    option_blue: str
+    option_red: str
+    global_votes_blue: int
+    global_votes_red: int
     is_nsfw: bool = False
 
-# Mock Database
-SFW_QUESTIONS = [
-    Question("sfw_1", "Everything taste too spicy", "Everything taste too sweet"),
-    Question("sfw_2", "Always be 10 minutes late", "Always be 20 minutes early"),
-    Question("sfw_3", "Have the ability to fly", "Have the ability to become invisible"),
-    Question("sfw_4", "Lose all your money and valuables", "Lose all the pictures you have ever taken"),
-    Question("sfw_5", "Only be able to whisper", "Only be able to shout"),
-]
+# In-memory storage for questions
+SFW_QUESTIONS = []
+NSFW_QUESTIONS = []
+ALL_QUESTIONS_MAP = {}
 
-NSFW_QUESTIONS = [
-    Question("nsfw_1", "Have sex without kissing your partner", "Have sex without using your hands at all", is_nsfw=True),
-    Question("nsfw_2", "Send a nude to your boss by accident", "Send a nude to your parents by accident", is_nsfw=True),
-    Question("nsfw_3", "Give up sex for a year", "Give up your favorite food for a year", is_nsfw=True),
-    Question("nsfw_4", "Walk in on your parents having sex", "Have your parents walk in on you having sex", is_nsfw=True),
-]
+def load_questions():
+    """Load JSON files into memory at startup."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sfw_path = os.path.join(base_dir, "data", "questions_sfw.json")
+    nsfw_path = os.path.join(base_dir, "data", "questions_nsfw.json")
+    
+    global SFW_QUESTIONS, NSFW_QUESTIONS, ALL_QUESTIONS_MAP
+    SFW_QUESTIONS.clear()
+    NSFW_QUESTIONS.clear()
+    ALL_QUESTIONS_MAP.clear()
+    
+    _load_file(sfw_path, False)
+    _load_file(nsfw_path, True)
+    
+    log.info(f"Loaded {len(SFW_QUESTIONS)} SFW questions and {len(NSFW_QUESTIONS)} NSFW questions.")
 
-def get_random_question(nsfw: bool = False) -> Question:
-    if nsfw:
-        return random.choice(NSFW_QUESTIONS)
-    return random.choice(SFW_QUESTIONS)
+def _load_file(filepath: str, is_nsfw: bool):
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            for item in data:
+                q = Question(
+                    id=item.get("id"),
+                    question=item.get("question"),
+                    option_blue=item.get("option_blue"),
+                    option_red=item.get("option_red"),
+                    global_votes_blue=item.get("global_votes_blue", 0),
+                    global_votes_red=item.get("global_votes_red", 0),
+                    is_nsfw=is_nsfw
+                )
+                if is_nsfw:
+                    NSFW_QUESTIONS.append(q)
+                else:
+                    SFW_QUESTIONS.append(q)
+                ALL_QUESTIONS_MAP[q.id] = q
+    except FileNotFoundError:
+        log.warning(f"File not found: {filepath}. Starting with empty {'NSFW' if is_nsfw else 'SFW'} database.")
+    except Exception as e:
+        log.error(f"Error loading {filepath}: {e}")
+
+def get_random_question(nsfw: bool = False, exclude_id: str = None) -> Question:
+    source_list = NSFW_QUESTIONS if nsfw else SFW_QUESTIONS
+    if not source_list:
+        return None # Return None if no questions are available
+
+    # Basic logic to prevent exact back-to-back repeats if possible
+    if len(source_list) > 1 and exclude_id:
+        filtered_list = [q for q in source_list if q.id != exclude_id]
+        if filtered_list:
+            return random.choice(filtered_list)
+            
+    return random.choice(source_list)
 
 def get_question_by_id(question_id: str) -> Question:
-    for q in SFW_QUESTIONS + NSFW_QUESTIONS:
-        if q.id == question_id:
-            return q
-    return SFW_QUESTIONS[0]
+    return ALL_QUESTIONS_MAP.get(question_id)

@@ -1,39 +1,57 @@
 import uuid
-from aiogram import Router
-from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent, InlineKeyboardMarkup, InlineKeyboardButton
-from database.questions import SFW_QUESTIONS, NSFW_QUESTIONS
+import random
+from aiogram import Router, types
+from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from database.questions import SFW_QUESTIONS
+from services.game_session import create_session
+from utils.formatting import format_question_text
 
 router = Router()
 
 @router.inline_query()
-async def inline_query_handler(query: InlineQuery):
+async def inline_query_handler(inline_query: types.InlineQuery):
+    if not SFW_QUESTIONS:
+        return
+        
+    # Get 5 random SFW questions for the inline menu
+    sampled = random.sample(SFW_QUESTIONS, min(5, len(SFW_QUESTIONS)))
     results = []
     
-    questions_to_show = SFW_QUESTIONS[:3] + NSFW_QUESTIONS[:3]
-    
-    for q in questions_to_show:
-        prefix = "[18+] " if q.is_nsfw else ""
-        title = f"{prefix}Would you rather..."
-        description = f"{q.option_a} OR {q.option_b}"
+    for q in sampled:
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🔵 Option 1", callback_data=f"vote_a_{q.id}")
+        builder.button(text="🔴 Option 2", callback_data=f"vote_b_{q.id}")
+        builder.adjust(2)
         
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🔵", callback_data=f"vote_a_temp_{q.id}"),
-                InlineKeyboardButton(text="🔴", callback_data=f"vote_b_temp_{q.id}")
-            ]
-        ])
+        text = format_question_text(
+            q.option_blue, 
+            q.option_red
+        )
         
-        result_id = str(uuid.uuid4())
         results.append(
             InlineQueryResultArticle(
-                id=result_id,
-                title=title,
-                description=description,
+                id=q.id,
+                title=f"Would You Rather: {q.option_blue} OR {q.option_red}",
+                description="Challenge a friend!",
                 input_message_content=InputTextMessageContent(
-                    message_text=f"{prefix}Would you rather...\n\n🔵 {q.option_a}\n🔴 {q.option_b}\n\nSelect your answer:"
+                    message_text=text,
+                    parse_mode="HTML"
                 ),
-                reply_markup=keyboard
+                reply_markup=builder.as_markup()
             )
         )
         
-    await query.answer(results, cache_time=1)
+    # Cache time is short so they get new random questions often
+    await inline_query.answer(results, cache_time=5, is_personal=True)
+
+@router.chosen_inline_result()
+async def chosen_inline_result_handler(chosen_result: types.ChosenInlineResult):
+    # The result_id is the question ID, which we set in InlineQueryResultArticle
+    question_id = chosen_result.result_id
+    inline_message_id = chosen_result.inline_message_id
+    
+    if inline_message_id:
+        game_id = f"inline_{inline_message_id}"
+        is_nsfw = question_id.startswith("nsfw")
+        create_session(game_id, question_id, is_nsfw=is_nsfw)

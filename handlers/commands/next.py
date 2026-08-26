@@ -1,27 +1,31 @@
-from aiogram import Router
+from aiogram import Router, types
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_random_question
 from services.game_session import create_session
-from utils.formatting import format_question_text, get_voting_keyboard
+from utils.formatting import format_question_text
 
 router = Router()
 
 @router.message(Command("next"))
-async def cmd_next(message: Message):
+async def cmd_next(message: types.Message):
     question = get_random_question(nsfw=False)
+    if not question:
+        await message.reply("No SFW questions found in the database!")
+        return
+
+    # Build initial buttons
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🔵", callback_data=f"vote_a_{question.id}")
+    builder.button(text="🔴", callback_data=f"vote_b_{question.id}")
+    builder.adjust(2)
+
+    text = format_question_text(
+        question.option_blue, 
+        question.option_red
+    )
+
+    msg = await message.reply(text, reply_markup=builder.as_markup(), parse_mode="HTML")
     
-    # We will temporarily use a placeholder game_id and update it once we send the message
-    # so we know the message_id
-    temp_msg = await message.answer("Loading...")
-    
-    chat_id = message.chat.id
-    msg_id = temp_msg.message_id
-    game_id = f"{chat_id}_{msg_id}"
-    
+    game_id = f"{message.chat.id}_{msg.message_id}"
     create_session(game_id, question.id, is_nsfw=False)
-    
-    text = format_question_text(question)
-    keyboard = get_voting_keyboard(game_id)
-    
-    await temp_msg.edit_text(text, reply_markup=keyboard)

@@ -1,71 +1,64 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from database.questions import Question
-from services.game_session import GameSession
+import html
+from aiogram.exceptions import TelegramBadRequest
+import logging
 
-def format_question_text(question: Question) -> str:
-    prefix = "[18+] " if question.is_nsfw else ""
-    return (
-        f"{prefix}Would you rather...\n\n"
-        f"🔵 {question.option_a}\n"
-        f"🔴 {question.option_b}\n\n"
-        f"Select your answer:"
-    )
+log = logging.getLogger(__name__)
 
-def format_waiting_text(question: Question, session: GameSession, chat_type: str = "group") -> str:
-    prefix = "[18+] " if question.is_nsfw else ""
-    names = ", ".join(session.voters_names.values())
+def create_progress_bar(percentage: float, length: int = 10) -> str:
+    """Creates a simple block progress bar."""
+    filled_blocks = int(round((percentage / 100) * length))
+    empty_blocks = length - filled_blocks
+    return "█" * filled_blocks + "░" * empty_blocks
+
+def format_question_text(option_a: str, option_b: str, 
+                         votes_a: int = 0, votes_b: int = 0, 
+                         show_stats: bool = False, 
+                         players_a: list = None, players_b: list = None, 
+                         waiting_text: str = "",
+                         is_nsfw: bool = False) -> str:
+    """Formats the question message text."""
+    # Ensure lists are instantiated
+    if players_a is None: players_a = []
+    if players_b is None: players_b = []
     
-    if chat_type == "private":
-        waiting_msg = f"{names} already answered!"
-    else:
-        import time
-        elapsed = time.time() - session.created_at
-        remaining = max(1, 15 - int(elapsed))
-        waiting_msg = f"Waiting {remaining} sec for players to answer...\n\n{names} already answered!"
+    option_a = html.escape(option_a)
+    option_b = html.escape(option_b)
+    
+    text = "<b>[18+] Would you rather...</b>\n\n" if is_nsfw else "<b>Would you rather...</b>\n\n"
+    
+    if show_stats:
+        total_votes = votes_a + votes_b
+        pct_a = (votes_a / total_votes * 100) if total_votes > 0 else 0
+        pct_b = (votes_b / total_votes * 100) if total_votes > 0 else 0
         
-    return (
-        f"{prefix}Would you rather...\n\n"
-        f"🔵 {question.option_a}\n"
-        f"🔴 {question.option_b}\n\n"
-        f"{waiting_msg}"
-    )
-
-def format_results_text(question: Question, session: GameSession) -> str:
-    prefix = "[18+] " if question.is_nsfw else ""
-    total_votes = len(session.votes_a) + len(session.votes_b)
-    
-    if total_votes == 0:
-        pct_a = 0
-        pct_b = 0
-    else:
-        pct_a = int((len(session.votes_a) / total_votes) * 100)
-        pct_b = 100 - pct_a
+        text += f"<b>({int(round(pct_a))}%)</b> 🔵 {option_a}\n"
+        text += f"<b>({int(round(pct_b))}%)</b> 🔴 {option_b}\n\n"
         
-    names_a = ", ".join([session.voters_names[uid] for uid in session.votes_a])
-    names_b = ", ".join([session.voters_names[uid] for uid in session.votes_b])
-    
-    if not names_a: names_a = "None"
-    if not names_b: names_b = "None"
-    
-    return (
-        f"{prefix}Would you rather...\n\n"
-        f"({pct_a}%) 🔵 {question.option_a}\n"
-        f"({pct_b}%) 🔴 {question.option_b}\n\n"
-        f"🔵 {names_a}\n"
-        f"🔴 {names_b}"
-    )
+        if players_a:
+            text += f"🔵 {', '.join([html.escape(p) for p in players_a])}\n"
+        if players_b:
+            text += f"🔴 {', '.join([html.escape(p) for p in players_b])}\n"
+    else:
+        text += f"🔵 {option_a}\n"
+        text += f"🔴 {option_b}\n\n"
+        
+    if waiting_text:
+        text += f"<i>{waiting_text}</i>"
+    elif not show_stats:
+        text += "Select your answer:"
+        
+    return text
 
-def get_voting_keyboard(game_id: str) -> InlineKeyboardMarkup:
-    # We pass the game_id to the callback data
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🔵", callback_data=f"vote_a_{game_id}"),
-            InlineKeyboardButton(text="🔴", callback_data=f"vote_b_{game_id}")
-        ]
-    ])
-
-def get_next_question_keyboard(is_nsfw: bool) -> InlineKeyboardMarkup:
-    # "is_nsfw" passed as 1 or 0
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Next Question", callback_data=f"next_q_{int(is_nsfw)}")]
-    ])
+async def safe_edit_message_text(message, text: str, reply_markup=None):
+    """Edits message text and gracefully ignores MessageNotModified errors."""
+    try:
+        if reply_markup is not None:
+            await message.edit_text(text, reply_markup=reply_markup, parse_mode="HTML")
+        else:
+            await message.edit_text(text, parse_mode="HTML")
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+            pass # Ignore benign error
+        else:
+            log.error(f"Error editing message: {e}")
+            raise e

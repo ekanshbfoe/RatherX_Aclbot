@@ -22,6 +22,8 @@ async def main():
     
     # Start periodic game session cleanup
     from services.game_session import cleanup_stale_sessions
+    from database.questions import load_questions
+    load_questions()
     asyncio.create_task(cleanup_stale_sessions())
 
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or not BOT_TOKEN:
