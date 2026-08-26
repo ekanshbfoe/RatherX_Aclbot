@@ -10,8 +10,12 @@ from handlers.commands.help import router as help_router
 from handlers.commands.feedback import router as feedback_router
 from handlers.commands.next import router as next_router
 from handlers.commands.nsfw import router as nsfw_router
+from handlers.commands.xcouple import router as xcouple_router
+from handlers.commands.mylove import router as mylove_router
+from handlers.commands.compatibility import router as compatibility_router
 from handlers.callbacks.vote import router as vote_router
 from handlers.callbacks.next_question import router as next_question_router
+from handlers.callbacks.xcouple_board import router as xcouple_board_router
 from handlers.inline import router as inline_router
 
 logging.basicConfig(level=logging.INFO)
@@ -39,9 +43,13 @@ async def main():
     dp.include_router(feedback_router)
     dp.include_router(next_router)
     dp.include_router(nsfw_router)
+    dp.include_router(xcouple_router)
+    dp.include_router(mylove_router)
+    dp.include_router(compatibility_router)
     
     dp.include_router(vote_router)
     dp.include_router(next_question_router)
+    dp.include_router(xcouple_board_router)
     
     dp.include_router(inline_router)
 

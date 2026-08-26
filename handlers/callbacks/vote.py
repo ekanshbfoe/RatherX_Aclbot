@@ -3,7 +3,7 @@ import time
 from aiogram import Router, types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_question_by_id
-from services.game_session import get_session, remove_session, create_session
+from services.game_session import get_session, remove_session, create_session, record_user_vote, chat_id_to_instance
 from utils.formatting import format_question_text, safe_edit_message_text
 
 router = Router()
@@ -50,6 +50,7 @@ async def resolve_game(game_id: str, message: types.Message | None, inline_messa
     # Add inline "Next Question" button for all games
     builder = InlineKeyboardBuilder()
     builder.button(text="➡️ Next Question", switch_inline_query_current_chat="")
+        
     reply_markup = builder.as_markup()
         
     if message:
@@ -108,6 +109,14 @@ async def process_vote(callback_query: types.CallbackQuery):
             session.votes_b.add(user_id)
             
         session.voters_names[user_id] = first_name
+        
+        # Record vote for Global (and Local if applicable) Leaderboard
+        username = callback_query.from_user.username
+        record_user_vote(user_id, first_name, question_id, vote_choice, chat_instance=callback_query.chat_instance, username=username)
+        
+        # Map chat_id to chat_instance for local commands (/mylove, /compatibility)
+        if not is_inline and callback_query.message.chat.type in ["group", "supergroup"]:
+            chat_id_to_instance[callback_query.message.chat.id] = callback_query.chat_instance
         
         # Check chat type to determine execution flow
         is_private = not is_inline and callback_query.message.chat.type == "private"
