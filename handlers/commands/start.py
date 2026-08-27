@@ -10,7 +10,7 @@ router = Router()
 # Keep strong references to background tasks to prevent garbage collection
 background_tasks = set()
 
-async def background_new_user_check(user: types.User, bot: Bot):
+async def process_new_user(user: types.User, bot: Bot):
     if not supabase: return
     try:
         # Check if user exists
@@ -46,14 +46,25 @@ async def cmd_start(message: types.Message, bot: Bot):
         await message.reply("💖 Successfully connected to your DMs! You can now use the /mylove command in group chats to receive your secret stats.")
     else:
         await message.reply(
-            "👋 Welcome to Would You Rather!\n\n"
-            "Send /next for a standard question or /nsfw for a spicy one!\n\n"
-            "You can also add me to a group and play with friends, or use inline mode "
-            "by typing `@YourBotUsername` in any chat!"
+            "<b>Welcome to Would You Rather Bot!</b>\n\n"
+            "<b>🕹 How to play single player?</b>\n"
+            "Use the following commands:\n"
+            "<code>/next</code> - get a new Would You Rather question\n"
+            "<code>/nsfw</code> - get a new NSFW (18+) question\n\n"
+            "<b>👨‍👩‍👧‍👦 How to play in a group?</b>\n"
+            "Add @RatherGameBot to your group and then use these commands:\n"
+            "<code>/next@RatherGameBot</code> - get a new Would You Rather question\n"
+            "<code>/nsfw@RatherGameBot</code> - get a new NSFW (18+) question\n\n"
+            "<b>👫 How to play inline?</b>\n"
+            "Type @RatherGameBot in a chat and select a question to play against a friend.\n\n"
+            "<b>❓ Feedback or suggestions?</b>\n"
+            "Please let us know with <code>/feedback</code>!\n\n"
+            "To view this info again, use <code>/help</code>.",
+            parse_mode="HTML"
         )
 
     # 2. Detached Background Task for Database Check
     if message.chat.type == "private":
-        task = asyncio.create_task(background_new_user_check(message.from_user, bot))
+        task = asyncio.create_task(process_new_user(message.from_user, bot))
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
