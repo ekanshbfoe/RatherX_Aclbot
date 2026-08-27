@@ -9,15 +9,17 @@ router = Router()
 
 @router.message(Command("mylove"))
 async def cmd_mylove(message: types.Message, bot: Bot):
+    processing_msg = await message.answer("<i>⏳ Accessing matchmaking database...</i>", parse_mode="HTML")
+    
     if message.chat.type == "private":
-        await message.reply("⚠️ This command is for group chats! It finds your top match in the group.")
+        await processing_msg.edit_text("⚠️ This command is for group chats! It finds your top match in the group.")
         return
         
     chat_id = message.chat.id
     chat_instance = await get_chat_instance(chat_id)
     
     if not chat_instance:
-        await message.reply("⚠️ I don't have enough local data for this group yet! Play a standard game with the /next command first so I can sync this chat.")
+        await processing_msg.edit_text("⚠️ I don't have enough local data for this group yet! Play a standard game with the /next command first so I can sync this chat.")
         return
         
     local_couples = await calculate_couples("local", chat_instance)
@@ -30,20 +32,20 @@ async def cmd_mylove(message: types.Message, bot: Bot):
             my_matches.append(c)
             
     if not my_matches:
-        await message.reply("⚠️ You haven't answered enough common questions (5+) with anyone in this chat yet!")
+        await processing_msg.edit_text("⚠️ You haven't answered enough common questions (5+) with anyone in this chat yet!")
         return
         
     text = format_mylove_dm(my_matches, user_id)
     
     try:
         await bot.send_message(chat_id=user_id, text=text, parse_mode="HTML")
-        await message.reply("💌 I've sent your top matches to your DMs!")
+        await processing_msg.edit_text("💌 I've sent your top matches to your DMs!")
     except TelegramForbiddenError:
         builder = InlineKeyboardBuilder()
         bot_me = await bot.get_me()
         builder.button(text="Start Bot", url=f"https://t.me/{bot_me.username}?start=love")
         
-        await message.reply(
+        await processing_msg.edit_text(
             f"Hey {message.from_user.first_name}! Start a chat with me privately first so I can send you your secret love stats.",
             reply_markup=builder.as_markup()
         )

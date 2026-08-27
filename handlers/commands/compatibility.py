@@ -7,15 +7,17 @@ router = Router()
 
 @router.message(Command("compatibility"))
 async def cmd_compatibility(message: types.Message):
+    processing_msg = await message.answer("<i>⏳ Accessing matchmaking database...</i>", parse_mode="HTML")
+    
     if message.chat.type == "private":
-        await message.reply("⚠️ This command is for group chats!")
+        await processing_msg.edit_text("⚠️ This command is for group chats!")
         return
         
     chat_id = message.chat.id
     chat_instance = await get_chat_instance(chat_id)
     
     if not chat_instance:
-        await message.reply("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
+        await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
         return
         
     # Extract exactly two @usernames
@@ -23,7 +25,7 @@ async def cmd_compatibility(message: types.Message):
     target_usernames = [p.replace('@', '') for p in parts if p.startswith('@')]
     
     if len(target_usernames) != 2:
-        await message.reply("⚠️ Please tag exactly two users. Usage: `/compatibility @user1 @user2`", parse_mode="Markdown")
+        await processing_msg.edit_text("⚠️ Please tag exactly two users. Usage: `/compatibility @user1 @user2`", parse_mode="Markdown")
         return
         
     target1, target2 = target_usernames
@@ -31,7 +33,7 @@ async def cmd_compatibility(message: types.Message):
     # Search local history for user_ids matching the usernames
     users_dict = await get_local_history_dict(chat_instance)
     if not users_dict:
-        await message.reply("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
+        await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
         return
         
     uid1 = None
@@ -44,13 +46,13 @@ async def cmd_compatibility(message: types.Message):
             uid2 = uid
             
     if not uid1 or not uid2:
-        await message.reply("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
+        await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
         return
         
     result = calculate_specific_compatibility(users_dict, uid1, uid2)
     if not result:
-        await message.reply("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
+        await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
         return
         
     text = format_compatibility(result)
-    await message.reply(text, parse_mode="HTML")
+    await processing_msg.edit_text(text, parse_mode="HTML")
