@@ -1,72 +1,140 @@
-# Would You Rather Telegram Bot
+<div align="center">
+  <h1>🔥 RatherX_Aclbot</h1>
+  <p><b>The ultimate "Would You Rather" Telegram experience. Fast. Social. Scalable.</b></p>
+  <p><i>Proudly built by the <b>ACL Community</b>.</i></p>
 
-A highly modular and fully-featured "Would You Rather" game bot for Telegram, built using `aiogram` 3.x and Python 3. It supports single-player, group chat, and inline modes with dynamic 15-second voting timers and percent-based results.
+  ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
+  ![License](https://img.shields.io/badge/License-MIT-green.svg)
+  ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+</div>
 
-## Features
+---
 
-- **Single Player:** Play directly with the bot via `/next` or `/nsfw`. Votes are registered instantly.
-- **Group Play:** Add the bot to a group. Type `/next@YourBotUsername` to start a round. Once the first player votes, a 15-second timer starts, allowing others to join in before the final percentages are revealed.
-- **Inline Mode:** Type `@YourBotUsername` in any chat to select a question and challenge a friend. It supports the same dynamic 15-second voting timer as group play!
-- **Keep-Alive Server:** Includes a lightweight Flask server built-in to keep the bot alive if hosted on platforms like Replit or Render.
+## 🌟 Features Showcase
 
-## Project Structure
+RatherX brings unparalleled interactive matchmaking and fast-paced gaming directly to Telegram chats.
 
-The project is structured for high maintainability with individual files for commands and handlers:
+### 🎮 Core Gameplay
+- **Rapid-Fire Engine:** Play standard (`/next`) or spicy (`/nsfw`) questions instantly.
+- **Dynamic Group Play:** In group chats, the first vote locks in a 15-second countdown timer! 
+- **Inline Mode:** Type `@RatherGameBot` in any chat to instantly beam a challenge to your friends.
+
+### 💞 Advanced Matchmaking
+Powered by our proprietary **Normalized Weighted Score** algorithm, the bot secretly learns how users vote and builds affinity maps in real-time.
+- **`/xcouple`:** View the server's Couple Board showing the top 5 most compatible pairs in the group.
+- **`/mylove`:** Get a secret DM from the bot revealing your top 5 secret admirers in the group.
+- **`/compatibility @user`:** Run an on-demand scan between yourself and any other user.
+
+### 🛠️ Admin & Support Ecosystem
+- **`/feedback` FSM System:** Users can submit ideas/bugs (text, photo, or video). Tickets are sent to the admin group with inline buttons (`[Fix]`, `[Ignore]`, `[Added]`) for instant triage.
+- **`/broadcast` Engine:** A detached background engine for safely broadcasting announcements to the entire Supabase user base with built-in batching and rate-limiting.
+- **Silent Analytics:** Instantly receive beautiful HTML alerts in a dedicated Admin Topic whenever a new user starts the bot or the bot is added to a new group!
+
+---
+
+## 🚀 Architecture Upgrades (v2.0)
+This bot has undergone a massive architectural overhaul for production-grade scalability.
+1. **aiohttp Webhooks:** We migrated away from Long Polling. The bot now runs on a lightning-fast `aiohttp` web server, making it fully stateless, scale-to-zero compatible, and perfect for platforms like Render and Heroku.
+2. **Supabase (PostgreSQL):** All in-memory dictionaries have been ripped out. Votes, matchmaking data, and user registries are now securely persisted in Supabase via an asynchronous client.
+3. **True Fire-and-Forget:** All heavy database inserts and matchmaking calculations are detached into `asyncio` background tasks to guarantee the Telegram UI updates instantly (zero perceived latency).
+
+---
+
+## 📁 Project Structure
 
 ```text
-would_you_rather_bot/
-├── .env                       # Stores environment variables (BOT_TOKEN)
-├── requirements.txt           # Python dependencies
-├── main.py                    # Entry point: initializes bot and registers routers
-├── keep_alive.py              # Background Flask server to keep the bot running
-├── config/
-│   └── settings.py            # Environment variable loader
-├── database/
-│   └── questions.py           # Mock database of SFW and NSFW questions
-├── services/
-│   └── game_session.py        # Logic for managing active games and timers
-├── handlers/
-│   ├── commands/
-│   │   ├── start.py           # /start command
-│   │   ├── help.py            # /help command
-│   │   ├── feedback.py        # /feedback command
-│   │   ├── next.py            # /next command
-│   │   └── nsfw.py            # /nsfw command
-│   ├── callbacks/
-│   │   ├── vote.py            # Handles inline voting clicks
-│   │   └── next_question.py   # Handles 'Next Question' button
-│   └── inline.py              # Handles inline mode (@botname) queries
-└── utils/
-    └── formatting.py          # Helper functions to build dynamic message texts
+📦 RatherX_Aclbot
+├── 📁 config
+│   └── 📄 settings.py          # Centralized Environment Variables
+├── 📁 database
+│   ├── 📄 questions.py         # Static question banks
+│   └── 📄 supabase_client.py   # Async Supabase Postgres client
+├── 📁 handlers
+│   ├── 📁 callbacks            # Interactive Button Handlers
+│   │   ├── 📄 next_question.py
+│   │   ├── 📄 vote.py          # Fire-and-forget voting logic
+│   │   └── 📄 xcouple_board.py
+│   ├── 📁 commands             # Chat Commands
+│   │   ├── 📄 admin_broadcast.py
+│   │   ├── 📄 compatibility.py
+│   │   ├── 📄 feedback.py      # FSM Ticket System
+│   │   ├── 📄 help.py
+│   │   ├── 📄 mylove.py
+│   │   ├── 📄 next.py
+│   │   ├── 📄 nsfw.py
+│   │   ├── 📄 start.py         # Smart New-User Tracking
+│   │   └── 📄 xcouple.py
+│   ├── 📁 events
+│   │   └── 📄 notifications.py # ChatMemberUpdated hooks
+│   └── 📄 inline.py            # Inline Query Matchmaking
+├── 📁 services
+│   └── 📄 game_session.py      # Matchmaking Math & DB Fallbacks
+├── 📄 .env.example
+├── 📄 main.py                  # aiohttp Webhook Entrypoint
+├── 📄 requirements.txt
+└── 📄 schema.sql               # Supabase Table Definitions
 ```
 
-## Installation & Setup
+---
 
-1. **Clone or Download** the repository.
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Configure Environment:**
-   Create a `.env` file in the root directory and add your Telegram Bot Token:
-   ```env
-   BOT_TOKEN=your_bot_token_here
-   ```
-4. **Run the Bot:**
-   ```bash
-   python main.py
-   ```
+## ⚙️ Installation & Deployment
 
-## Bot Commands
+### 1. Requirements
+- Python 3.11+
+- A [Supabase](https://supabase.com/) Account & Project
+- A Telegram Bot Token from [@BotFather](https://t.me/BotFather)
 
-- `/start` - Displays the welcome message and instructions.
-- `/help` - Displays the help message.
-- `/next` - Get a new SFW Would You Rather question.
-- `/nsfw` - Get a new NSFW (18+) Would You Rather question.
-- `/feedback` - Send feedback or suggestions to the developers.
+### 2. Database Setup
+Run the SQL queries found in `schema.sql` in your Supabase SQL Editor to generate the `rather_users`, `rather_votes_local`, `rather_votes_global`, and `rather_chat_mappings` tables.
 
-## Tech Stack
-- [Python 3](https://www.python.org/)
-- [aiogram 3.x](https://docs.aiogram.dev/en/latest/) (Async Telegram Bot API framework)
-- [Flask](https://flask.palletsprojects.com/) (For keep-alive background thread)
-"# RatherX_Aclbot" 
+### 3. Environment Configuration
+Copy the `.env.example` file to `.env` and configure your credentials.
+
+| Variable | Description |
+| -------- | ----------- |
+| `BOT_TOKEN` | Your Telegram Bot Token. |
+| `SUPABASE_URL` | Your Supabase Project URL. |
+| `SUPABASE_KEY` | Your Supabase `anon` / `publishable` API Key. |
+| `OWNER_ID` | Your Telegram User ID (Used to authorize `/broadcast`). |
+| `FEEDBACK_GROUP_ID` | The Chat ID where feedback tickets are sent. |
+| `FEEDBACK_TOPIC_ID` | The specific thread ID in the feedback group. |
+| `NOTIFICATION_LOG_GROUP` | The Chat ID where bot analytics/growth alerts are sent. |
+| `NOTIFICATION_LOG_TOPIC_ID` | The specific thread ID in the notifications group. |
+| `WEBHOOK_URL` | Your production HTTPS URL (e.g., `https://app.onrender.com`). **Leave blank for local testing!** |
+| `WEBHOOK_PATH` | The route to receive payloads (Default: `/webhook`). |
+| `WEBAPP_HOST` | Web server host (Default: `0.0.0.0`). |
+| `WEBAPP_PORT` | Web server port (Default: `8080`). |
+
+### 4. Running the Bot
+
+**Local Testing (No Webhook):**
+Ensure `WEBHOOK_URL` is blank in your `.env`.
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+**Production (Webhooks):**
+Set the `WEBHOOK_URL` in your host's environment dashboard. Deploy `main.py` using your host's standard Python web service configuration. The bot will automatically bind to port `8080` and instruct Telegram to stream traffic to your URL!
+
+---
+
+## 📖 Command Reference
+
+| Command | Type | Description |
+|---------|------|-------------|
+| `/start` | 👤 User | Initializes the bot and sends the welcome menu. |
+| `/help` / `.help` | 👤 User | Shows the beautifully formatted command list. |
+| `/next` | 🎮 Game | Generates a standard SFW question. |
+| `/nsfw` | 🎮 Game | Generates an 18+ NSFW question. |
+| `/xcouple` | 💞 Social | Shows the top 5 most compatible pairs in the group. |
+| `/mylove` | 💞 Social | DM's the user their top 5 secret admirers in the group. |
+| `/compatibility @user` | 💞 Social | Scans compatibility between two specific users. |
+| `/feedback` / `.feedback` | 🛠️ Util | Opens the FSM to submit bugs or feature ideas. |
+| `/broadcast` | 👑 Admin | *(Reply to a message)* Batch-forwards the message to all users/groups. |
+
+---
+
+<div align="center">
+  <i>Built with ❤️ by the ACL Community</i>
+</div>
