@@ -4,3 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+OWNER_ID = int(os.getenv("OWNER_ID", "784548961"))
+FEEDBACK_GROUP_ID = int(os.getenv("FEEDBACK_GROUP_ID", "-1003049612396"))
+FEEDBACK_TOPIC_ID = int(os.getenv("FEEDBACK_TOPIC_ID", "21"))
+NOTIFICATION_LOG_GROUP = int(os.getenv("NOTIFICATION_LOG_GROUP", "-1003049612396"))
+NOTIFICATION_LOG_TOPIC_ID = int(os.getenv("NOTIFICATION_LOG_TOPIC_ID", "18"))

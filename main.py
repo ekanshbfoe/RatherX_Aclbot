@@ -13,10 +13,12 @@ from handlers.commands.nsfw import router as nsfw_router
 from handlers.commands.xcouple import router as xcouple_router
 from handlers.commands.mylove import router as mylove_router
 from handlers.commands.compatibility import router as compatibility_router
+from handlers.commands.admin_broadcast import router as admin_broadcast_router
 from handlers.callbacks.vote import router as vote_router
 from handlers.callbacks.next_question import router as next_question_router
 from handlers.callbacks.xcouple_board import router as xcouple_board_router
 from handlers.inline import router as inline_router
+from handlers.events.notifications import router as notifications_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -46,17 +48,19 @@ async def main():
     dp.include_router(xcouple_router)
     dp.include_router(mylove_router)
     dp.include_router(compatibility_router)
+    dp.include_router(admin_broadcast_router)
     
     dp.include_router(vote_router)
     dp.include_router(next_question_router)
     dp.include_router(xcouple_board_router)
     
     dp.include_router(inline_router)
+    dp.include_router(notifications_router)
 
     # Start polling
     logging.info("Starting bot...")
     await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot, allowed_updates=["message", "inline_query", "callback_query"])
+    await dp.start_polling(bot, allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"])
 
 if __name__ == "__main__":
     asyncio.run(main())
