@@ -5,12 +5,10 @@ from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config.settings import OWNER_ID
 from database.supabase_client import supabase
+from services.game_session import track_task
 
 router = Router()
 log = logging.getLogger(__name__)
-
-# Keep strong references to background tasks to prevent garbage collection
-background_tasks = set()
 
 @router.message(Command("broadcast"))
 async def cmd_broadcast(message: types.Message):
@@ -49,11 +47,11 @@ async def process_broadcast(callback_query: types.CallbackQuery, bot: Bot):
     await callback_query.answer()
     
     # Detach to background task
-    task = asyncio.create_task(
+    track_task(
         execute_broadcast(bot, callback_query.message.chat.id, msg_id, target, callback_query.message)
     )
-    background_tasks.add(task)
-    task.add_done_callback(background_tasks.discard)
+
+from aiogram.exceptions import TelegramRetryAfter, TelegramForbiddenError, TelegramBadRequest
 
 async def execute_broadcast(bot: Bot, from_chat_id: int, message_id: int, target: str, status_message: types.Message):
     if not supabase:
@@ -83,18 +81,42 @@ async def execute_broadcast(bot: Bot, from_chat_id: int, message_id: int, target
         
     sent_count = 0
     fail_count = 0
+    targets_list = list(targets)
     
-    for i, target_id in enumerate(targets):
-        try:
-            await bot.forward_message(chat_id=target_id, from_chat_id=from_chat_id, message_id=message_id)
-            sent_count += 1
-        except Exception as e:
-            fail_count += 1
-            
-        await asyncio.sleep(0.05)
+    for i, target_id in enumerate(targets_list):
+        for attempt in range(3):  # Up to 3 retries per recipient
+            try:
+                await bot.forward_message(chat_id=target_id, from_chat_id=from_chat_id, message_id=message_id)
+                sent_count += 1
+                break  # Success, move on
+            except TelegramRetryAfter as e:
+                # Telegram says "slow down" – we MUST respect this
+                log.warning(f"FloodWait for {e.retry_after}s during broadcast.")
+                await asyncio.sleep(e.retry_after + 1)
+                # Don't break — retry the same target
+            except (TelegramForbiddenError, TelegramBadRequest):
+                # Bot was blocked or chat doesn't exist — skip permanently
+                fail_count += 1
+                break
+            except Exception as e:
+                log.error(f"Broadcast error for {target_id}: {e}")
+                fail_count += 1
+                break
         
+        # Conservative rate: 25 msg/burst, then 1 second pause
+        await asyncio.sleep(0.04)  # ~25/sec
         if (i + 1) % 25 == 0:
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(1)
+            
+        # Progress update every 500 messages
+        if (i + 1) % 500 == 0:
+            try:
+                await status_message.edit_text(
+                    f"⏳ Broadcasting... {i+1}/{len(targets_list)} ({sent_count} sent, {fail_count} failed)",
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
             
     await status_message.edit_text(
         f"✅ <b>Broadcast Complete</b>\n\n"

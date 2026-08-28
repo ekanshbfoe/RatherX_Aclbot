@@ -16,13 +16,14 @@ async def bot_added_to_group(event: types.ChatMemberUpdated, bot: Bot):
     except Exception:
         member_count = "Unknown"
         
+    username_text = f"\n@{user.username}" if user.username else ""
     text = (
         f"🎉 <b>Bot Added to Group!</b>\n\n"
         f"📌 <b>Title:</b> {chat.title}\n"
         f"🆔 <b>Chat ID:</b> <code>{chat.id}</code>\n"
         f"👥 <b>Members:</b> {member_count}\n"
-        f"👤 <b>Added By:</b> {user.first_name} (<code>{user.id}</code>)\n"
-        f"@{user.username}" if user.username else ""
+        f"👤 <b>Added By:</b> {user.first_name} (<code>{user.id}</code>)"
+        f"{username_text}"
     )
     
     try:

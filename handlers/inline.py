@@ -25,7 +25,6 @@ async def inline_query_handler(inline_query: types.InlineQuery):
                 id="article_sfw",
                 title="Get Question",
                 description="Play a standard Would You Rather question",
-                thumbnail_url="https://placehold.co/100x100/blue/white?text=?",
                 input_message_content=InputTextMessageContent(
                     message_text=text_sfw,
                     parse_mode="HTML"
@@ -49,7 +48,6 @@ async def inline_query_handler(inline_query: types.InlineQuery):
                 id="article_nsfw",
                 title="Get Question (18+)",
                 description="Play an NSFW 18+ question",
-                thumbnail_url="https://placehold.co/100x100/red/white?text=18%2B",
                 input_message_content=InputTextMessageContent(
                     message_text=text_nsfw,
                     parse_mode="HTML"

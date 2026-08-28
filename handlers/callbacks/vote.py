@@ -3,11 +3,8 @@ import time
 from aiogram import Router, types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_question_by_id
-from services.game_session import get_session, remove_session, create_session, record_user_vote, map_chat_instance
+from services.game_session import get_session, remove_session, create_session, record_user_vote, map_chat_instance, track_task
 from utils.formatting import format_question_text, safe_edit_message_text
-
-# Keep strong references to background tasks to prevent garbage collection
-background_tasks = set()
 
 router = Router()
 
@@ -115,46 +112,40 @@ async def process_vote(callback_query: types.CallbackQuery):
         
         # Record vote for Global (and Local if applicable) Leaderboard
         username = callback_query.from_user.username
-        task1 = asyncio.create_task(record_user_vote(user_id, first_name, question_id, vote_choice, chat_instance=callback_query.chat_instance, username=username))
-        background_tasks.add(task1)
-        task1.add_done_callback(background_tasks.discard)
+        track_task(record_user_vote(user_id, first_name, question_id, vote_choice, chat_instance=callback_query.chat_instance, username=username))
         
         # Map chat_id to chat_instance for local commands (/mylove, /compatibility)
         if not is_inline and callback_query.message.chat.type in ["group", "supergroup"]:
-            task2 = asyncio.create_task(map_chat_instance(callback_query.message.chat.id, callback_query.chat_instance))
-            background_tasks.add(task2)
-            task2.add_done_callback(background_tasks.discard)
+            track_task(map_chat_instance(callback_query.message.chat.id, callback_query.chat_instance))
         
         # Check chat type to determine execution flow
         is_private = not is_inline and callback_query.message.chat.type == "private"
         
+        # ── SINGLE ATOMIC SECTION: Check + spawn timer + throttle UI ──
+        num_voters = len(session.votes_a) + len(session.votes_b)
+        is_first_vote = (num_voters == 1)
+        spawned_timer = False
+
+        if num_voters >= 2 and session.timer_task is None:
+            session.timer_task = asyncio.create_task(
+                game_timer(game_id, callback_query.message if not is_inline else None,
+                           callback_query.inline_message_id, callback_query.bot)
+            )
+            spawned_timer = True
+
+        now = time.time()
+        should_update_ui = is_first_vote or spawned_timer or (now - session.last_ui_update_time > 1.5)
+        if should_update_ui:
+            session.last_ui_update_time = now
+
+    # ── Outside lock: do the I/O work ──
     if is_private:
         await callback_query.answer("Vote registered!")
         await resolve_game(game_id, callback_query.message, None, callback_query.bot)
         return
         
-    # Group or Inline flow
     await callback_query.answer("Vote registered!")
     
-    spawned_timer = False
-    is_first_vote = False
-    async with session.lock:
-        num_voters = len(session.votes_a) + len(session.votes_b)
-        if num_voters == 1:
-            is_first_vote = True
-            
-        if num_voters >= 2 and not session.timer_task:
-            # Second vote triggers the 15s timer
-            session.timer_task = asyncio.create_task(game_timer(game_id, callback_query.message if not is_inline else None, callback_query.inline_message_id, callback_query.bot))
-            spawned_timer = True
-            
-        # Throttle UI updates to max once per 1.5s
-        now = time.time()
-        should_update_ui = False
-        if is_first_vote or spawned_timer or (now - session.last_ui_update_time > 1.5):
-            session.last_ui_update_time = now
-            should_update_ui = True
-            
     if should_update_ui:
         question = get_question_by_id(question_id)
         if not question:

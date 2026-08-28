@@ -3,7 +3,9 @@ import logging
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
-from config.settings import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT
+import orjson
+from aiogram.client.session.aiohttp import AiohttpSession
+from config.settings import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT, WEBHOOK_SECRET
 
 # Import all routers
 from handlers.commands.start import router as start_router
@@ -31,7 +33,11 @@ async def on_startup(bot: Bot):
     asyncio.create_task(cleanup_stale_sessions())
     
     if WEBHOOK_URL:
-        await bot.set_webhook(f"{WEBHOOK_URL}{WEBHOOK_PATH}", allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"])
+        await bot.set_webhook(
+            f"{WEBHOOK_URL}{WEBHOOK_PATH}", 
+            allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"],
+            secret_token=WEBHOOK_SECRET
+        )
 
 async def on_shutdown(bot: Bot):
     await bot.delete_webhook(drop_pending_updates=True)
@@ -41,7 +47,11 @@ def main():
         logging.error("Please set your BOT_TOKEN in the .env file")
         return
 
-    bot = Bot(token=BOT_TOKEN)
+    session = AiohttpSession(
+        json_loads=orjson.loads,
+        json_dumps=lambda data: orjson.dumps(data).decode("utf-8")
+    )
+    bot = Bot(token=BOT_TOKEN, session=session)
     dp = Dispatcher()
 
     # Register routers
@@ -69,6 +79,7 @@ def main():
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
         bot=bot,
+        secret_token=WEBHOOK_SECRET,
     )
     webhook_requests_handler.register(app, path=WEBHOOK_PATH)
     

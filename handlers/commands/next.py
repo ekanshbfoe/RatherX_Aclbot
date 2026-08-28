@@ -1,3 +1,4 @@
+import time
 from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -7,8 +8,23 @@ from utils.formatting import format_question_text
 
 router = Router()
 
+_next_cooldowns: dict[int, float] = {}
+NEXT_COOLDOWN_SECONDS = 10
+
 @router.message(Command("next"))
 async def cmd_next(message: types.Message):
+    chat_id = message.chat.id
+    now = time.time()
+    
+    # Rate limit: one /next per 10 seconds per chat
+    last = _next_cooldowns.get(chat_id, 0)
+    if now - last < NEXT_COOLDOWN_SECONDS:
+        remaining = int(NEXT_COOLDOWN_SECONDS - (now - last))
+        await message.reply(f"⏳ Please wait {remaining}s before starting a new game.")
+        return
+    
+    _next_cooldowns[chat_id] = now
+    
     question = get_random_question(nsfw=False)
     if not question:
         await message.reply("No SFW questions found in the database!")

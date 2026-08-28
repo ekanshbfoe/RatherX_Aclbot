@@ -4,14 +4,19 @@ from aiogram.filters import Command, CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config.settings import OWNER_ID, NOTIFICATION_LOG_GROUP, NOTIFICATION_LOG_TOPIC_ID
 from database.supabase_client import supabase
+from services.game_session import track_task
+from cachetools import TTLCache
 
 router = Router()
 
-# Keep strong references to background tasks to prevent garbage collection
-background_tasks = set()
+_known_users_cache = TTLCache(maxsize=8192, ttl=3600)
 
 async def process_new_user(user: types.User, bot: Bot):
     if not supabase: return
+    
+    if user.id in _known_users_cache:
+        return
+        
     try:
         # Check if user exists
         res = await asyncio.to_thread(
@@ -34,6 +39,8 @@ async def process_new_user(user: types.User, bot: Bot):
                     on_conflict="user_id"
                 ).execute()
             )
+            
+        _known_users_cache[user.id] = True
     except Exception:
         pass
 
@@ -65,6 +72,4 @@ async def cmd_start(message: types.Message, bot: Bot):
 
     # 2. Detached Background Task for Database Check
     if message.chat.type == "private":
-        task = asyncio.create_task(process_new_user(message.from_user, bot))
-        background_tasks.add(task)
-        task.add_done_callback(background_tasks.discard)
+        track_task(process_new_user(message.from_user, bot))

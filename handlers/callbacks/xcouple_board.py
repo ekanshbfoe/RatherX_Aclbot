@@ -1,11 +1,24 @@
+import time
 from aiogram import Router, types
 from services.game_session import calculate_couples
 from utils.formatting import format_interactive_couple_board
 
 router = Router()
 
+_xboard_cooldowns: dict[int, float] = {}
+XBOARD_COOLDOWN_SECONDS = 30
+
 @router.callback_query(lambda c: c.data and c.data.startswith('xboard:'))
 async def process_xboard(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    now = time.time()
+    last = _xboard_cooldowns.get(user_id, 0)
+    if now - last < XBOARD_COOLDOWN_SECONDS:
+        remaining = int(XBOARD_COOLDOWN_SECONDS - (now - last))
+        await callback_query.answer(f"Please wait {remaining}s before refreshing.", show_alert=True)
+        return
+    _xboard_cooldowns[user_id] = now
+    
     await callback_query.message.edit_text("<i>⏳ Crunching compatibility algorithms...</i>", parse_mode="HTML")
     
     scope = callback_query.data.split(':')[1]

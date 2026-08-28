@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from config.settings import FEEDBACK_GROUP_ID, FEEDBACK_TOPIC_ID
+from config.settings import FEEDBACK_GROUP_ID, FEEDBACK_TOPIC_ID, OWNER_ID
 
 router = Router()
 
@@ -111,8 +111,27 @@ async def process_feedback_content(message: types.Message, state: FSMContext, bo
         
     await state.clear()
 
+@router.message(FeedbackStates.waiting_for_content)
+async def feedback_unsupported_content(message: types.Message, state: FSMContext):
+    """Catch-all: reject unsupported file types and keep the user in state."""
+    await message.reply(
+        "⚠️ Unsupported format. Please send only text, a photo, or a video.\n"
+        "Send /cancel to exit feedback mode."
+    )
+
+@router.message(Command("cancel"))
+async def cmd_cancel_feedback(message: types.Message, state: FSMContext):
+    current = await state.get_state()
+    if current is not None:
+        await state.clear()
+        await message.reply("✅ Feedback cancelled.")
+
 @router.callback_query(lambda c: c.data and c.data.startswith("admin_ticket:"))
 async def process_admin_ticket(callback_query: types.CallbackQuery):
+    if callback_query.from_user.id != OWNER_ID:
+        await callback_query.answer("Unauthorized.", show_alert=True)
+        return
+        
     action = callback_query.data.split(":")[1]
     
     if action == "ignore":

@@ -1,4 +1,4 @@
-import json
+import orjson
 import random
 import os
 import logging
@@ -40,7 +40,7 @@ def load_questions():
 def _load_file(filepath: str, is_nsfw: bool):
     try:
         with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            data = orjson.loads(f.read())
             for item in data:
                 q = Question(
                     id=item.get("id"),
