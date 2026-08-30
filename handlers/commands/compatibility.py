@@ -1,9 +1,25 @@
+import asyncio
 from aiogram import Router, types
 from aiogram.filters import Command
 from services.game_session import get_chat_instance, get_local_history_dict, calculate_specific_compatibility
 from utils.formatting import format_compatibility
+from database.supabase_client import supabase
 
 router = Router()
+
+async def resolve_user_id(target: str) -> int | None:
+    if target.isdigit():
+        return int(target)
+    elif target.startswith('@'):
+        username = target[1:]
+        if not supabase:
+            return None
+        res = await asyncio.to_thread(
+            lambda: supabase.table("rather_users").select("user_id").eq("username", username).execute()
+        )
+        if res.data:
+            return res.data[0]["user_id"]
+    return None
 
 @router.message(Command("compatibility"))
 async def cmd_compatibility(message: types.Message):
@@ -20,34 +36,26 @@ async def cmd_compatibility(message: types.Message):
         await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
         return
         
-    # Extract exactly two @usernames
+    # Extract arguments (ignoring the command itself)
     parts = message.text.split()
-    target_usernames = [p.replace('@', '') for p in parts if p.startswith('@')]
+    target_args = [p for p in parts[1:] if p.startswith('@') or p.isdigit()]
     
-    if len(target_usernames) != 2:
-        await processing_msg.edit_text("⚠️ Please tag exactly two users. Usage: `/compatibility @user1 @user2`", parse_mode="Markdown")
+    if len(target_args) != 2:
+        await processing_msg.edit_text("⚠️ Please provide exactly two users (usernames or IDs). Usage: `/compatibility @user1 784548961`", parse_mode="Markdown")
         return
         
-    target1, target2 = target_usernames
+    target1, target2 = target_args
     
-    # Search local history for user_ids matching the usernames
-    users_dict = await get_local_history_dict(chat_instance)
-    if not users_dict:
-        await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
-        return
-        
-    uid1 = None
-    uid2 = None
+    # Update Supabase GET request logic to query rather_users
+    uid1 = await resolve_user_id(target1)
+    uid2 = await resolve_user_id(target2)
     
-    for uid, data in users_dict.items():
-        if data.get("username") == target1:
-            uid1 = uid
-        elif data.get("username") == target2:
-            uid2 = uid
-            
     if not uid1 or not uid2:
-        await processing_msg.edit_text("<i>⚠️ Not enough data! Both players must answer at least 5 common questions in this chat to calculate compatibility.</i>", parse_mode="HTML")
+        await processing_msg.edit_text("⚠️ Could not find one or both users in the database. Make sure they have played the game before.")
         return
+
+    # Fetch local history and calculate
+    users_dict = await get_local_history_dict(chat_instance)
         
     result = calculate_specific_compatibility(users_dict, uid1, uid2)
     if not result:
