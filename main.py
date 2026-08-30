@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 import orjson
 from aiogram.client.session.aiohttp import AiohttpSession
-from config.settings import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_SECRET
+from config.settings import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_PATH, WEBHOOK_SECRET
 
 # Import all routers
 from handlers.commands.start import router as start_router
@@ -37,8 +37,9 @@ async def on_startup(bot: Bot):
     asyncio.create_task(cleanup_stale_sessions())
     
     if WEBHOOK_URL:
+        webhook_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
         await bot.set_webhook(
-            url=f"{WEBHOOK_URL}/webhook", 
+            url=webhook_url, 
             drop_pending_updates=True,
             allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"]
         )
@@ -87,7 +88,7 @@ def main():
         dispatcher=dp,
         bot=bot
     )
-    webhook_requests_handler.register(app, path="/webhook")
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
     
     setup_application(app, dp, bot=bot)
 
