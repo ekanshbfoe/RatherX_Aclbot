@@ -40,8 +40,7 @@ async def on_startup(bot: Bot):
     logging.info(f"Setting webhook to: {webhook_url}/webhook")
     await bot.set_webhook(
         url=f"{webhook_url}/webhook", 
-        drop_pending_updates=True,
-        allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"]
+        drop_pending_updates=True
     )
 
 async def on_shutdown(bot: Bot):
