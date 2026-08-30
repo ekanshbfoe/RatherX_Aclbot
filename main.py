@@ -36,16 +36,15 @@ async def on_startup(bot: Bot):
     load_questions()
     asyncio.create_task(cleanup_stale_sessions())
     
-    if WEBHOOK_URL:
-        webhook_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
-        await bot.set_webhook(
-            url=webhook_url, 
-            drop_pending_updates=True,
-            allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"]
-        )
+    webhook_url = os.getenv("WEBHOOK_URL", "https://ratherx-aclbot.onrender.com")
+    logging.info(f"Setting webhook to: {webhook_url}/webhook")
+    await bot.set_webhook(
+        url=f"{webhook_url}/webhook", 
+        drop_pending_updates=True,
+        allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"]
+    )
 
 async def on_shutdown(bot: Bot):
-    await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
 
 def main():
