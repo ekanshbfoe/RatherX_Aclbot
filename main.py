@@ -1,11 +1,12 @@
 import asyncio
 import logging
+import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 import orjson
 from aiogram.client.session.aiohttp import AiohttpSession
-from config.settings import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT, WEBHOOK_SECRET
+from config.settings import BOT_TOKEN, WEBHOOK_URL, WEBHOOK_SECRET
 
 # Import all routers
 from handlers.commands.start import router as start_router
@@ -25,6 +26,9 @@ from handlers.events.notifications import router as notifications_router
 
 logging.basicConfig(level=logging.INFO)
 
+async def health_check(request):
+    return web.Response(text="RatherX Bot is running healthy!", status=200)
+
 async def on_startup(bot: Bot):
     # Start periodic game session cleanup
     from services.game_session import cleanup_stale_sessions
@@ -34,13 +38,14 @@ async def on_startup(bot: Bot):
     
     if WEBHOOK_URL:
         await bot.set_webhook(
-            f"{WEBHOOK_URL}{WEBHOOK_PATH}", 
-            allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"],
-            secret_token=WEBHOOK_SECRET
+            url=f"{WEBHOOK_URL}/webhook", 
+            drop_pending_updates=True,
+            allowed_updates=["message", "inline_query", "callback_query", "my_chat_member"]
         )
 
 async def on_shutdown(bot: Bot):
     await bot.delete_webhook(drop_pending_updates=True)
+    await bot.session.close()
 
 def main():
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or not BOT_TOKEN:
@@ -76,17 +81,21 @@ def main():
     dp.shutdown.register(on_shutdown)
     
     app = web.Application()
+    app.router.add_get("/", health_check)
+    
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
-        bot=bot,
-        secret_token=WEBHOOK_SECRET,
+        bot=bot
     )
-    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+    webhook_requests_handler.register(app, path="/webhook")
     
     setup_application(app, dp, bot=bot)
 
-    logging.info(f"Starting aiohttp webhook server on {WEBAPP_HOST}:{WEBAPP_PORT}...")
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+    PORT = int(os.getenv("PORT", 8080))
+    HOST = "0.0.0.0"
+
+    logging.info(f"Starting aiohttp webhook server on {HOST}:{PORT}...")
+    web.run_app(app, host=HOST, port=PORT)
 
 if __name__ == "__main__":
     main()
