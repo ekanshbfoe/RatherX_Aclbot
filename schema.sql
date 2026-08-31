@@ -32,3 +32,13 @@ CREATE TABLE rather_votes_local (
 CREATE INDEX idx_rather_votes_global_user ON rather_votes_global(user_id);
 CREATE INDEX idx_rather_votes_local_chat ON rather_votes_local(chat_instance);
 CREATE INDEX idx_rather_votes_local_user ON rather_votes_local(user_id);
+
+CREATE TABLE rather_bot_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL
+);
+
+-- Insert default blank rows for the alive media settings
+INSERT INTO rather_bot_settings (setting_key, setting_value) 
+VALUES ('alive_media_id', ''), ('alive_media_type', '') 
+ON CONFLICT DO NOTHING;

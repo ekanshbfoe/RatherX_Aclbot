@@ -1,6 +1,9 @@
 import asyncio
 import logging
 import os
+import time
+
+BOOT_TIME = time.time()
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -23,6 +26,7 @@ from handlers.callbacks.next_question import router as next_question_router
 from handlers.callbacks.xcouple_board import router as xcouple_board_router
 from handlers.inline import router as inline_router
 from handlers.events.notifications import router as notifications_router
+from handlers.commands.alive import router as alive_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -75,6 +79,7 @@ def main():
     
     dp.include_router(inline_router)
     dp.include_router(notifications_router)
+    dp.include_router(alive_router)
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
