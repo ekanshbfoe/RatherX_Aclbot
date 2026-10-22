@@ -1,9 +1,6 @@
 import asyncio
 import logging
 import os
-import time
-
-BOOT_TIME = time.time()
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -44,7 +41,8 @@ async def on_startup(bot: Bot):
     logging.info(f"Setting webhook to: {webhook_url}/webhook")
     await bot.set_webhook(
         url=f"{webhook_url}/webhook", 
-        drop_pending_updates=True
+        drop_pending_updates=True,
+        secret_token=WEBHOOK_SECRET or None
     )
 
 async def on_shutdown(bot: Bot):
@@ -89,7 +87,8 @@ def main():
     
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
-        bot=bot
+        bot=bot,
+        secret_token=WEBHOOK_SECRET or None
     )
     webhook_requests_handler.register(app, path=WEBHOOK_PATH)
     
