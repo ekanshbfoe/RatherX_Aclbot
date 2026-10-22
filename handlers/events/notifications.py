@@ -1,3 +1,4 @@
+import html
 import logging
 from aiogram import Router, types, Bot
 from aiogram.filters.chat_member_updated import ChatMemberUpdatedFilter, IS_NOT_MEMBER, MEMBER, ADMINISTRATOR
@@ -19,10 +20,10 @@ async def bot_added_to_group(event: types.ChatMemberUpdated, bot: Bot):
     username_text = f"\n@{user.username}" if user.username else ""
     text = (
         f"🎉 <b>Bot Added to Group!</b>\n\n"
-        f"📌 <b>Title:</b> {chat.title}\n"
+        f"📌 <b>Title:</b> {html.escape(chat.title or '')}\n"
         f"🆔 <b>Chat ID:</b> <code>{chat.id}</code>\n"
         f"👥 <b>Members:</b> {member_count}\n"
-        f"👤 <b>Added By:</b> {user.first_name} (<code>{user.id}</code>)"
+        f"👤 <b>Added By:</b> {html.escape(user.first_name)} (<code>{user.id}</code>)"
         f"{username_text}"
     )
     

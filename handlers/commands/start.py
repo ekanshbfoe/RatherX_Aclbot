@@ -1,5 +1,6 @@
 import asyncio
 import html
+import logging
 from aiogram import Router, types, Bot
 from aiogram.filters import Command, CommandStart
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -10,6 +11,7 @@ from services.game_session import track_task
 from cachetools import TTLCache
 
 router = Router()
+log = logging.getLogger(__name__)
 
 _known_users_cache = TTLCache(maxsize=8192, ttl=3600)
 
@@ -26,15 +28,7 @@ async def process_new_user(user: types.User, bot: Bot):
         )
         
         if not res.data:
-            # User does not exist, send notification
-            await bot.send_message(
-                chat_id=NOTIFICATION_LOG_GROUP, 
-                message_thread_id=NOTIFICATION_LOG_TOPIC_ID,
-                text=f"👤 <b>New User Started Bot!</b>\nName: {user.first_name}\nID: <code>{user.id}</code>\nUsername: @{user.username}",
-                parse_mode="HTML"
-            )
-            
-            # Insert them into the DB so it doesn't trigger again
+            # Insert them into the DB first so a failed alert can't make this repeat on every /start
             await asyncio.to_thread(
                 lambda: supabase.table("rather_users").upsert(
                     {"user_id": user.id, "first_name": user.first_name, "username": user.username},
@@ -42,9 +36,20 @@ async def process_new_user(user: types.User, bot: Bot):
                 ).execute()
             )
             
+            username_text = f"@{html.escape(user.username)}" if user.username else "—"
+            try:
+                await bot.send_message(
+                    chat_id=NOTIFICATION_LOG_GROUP, 
+                    message_thread_id=NOTIFICATION_LOG_TOPIC_ID,
+                    text=f"👤 <b>New User Started Bot!</b>\nName: {html.escape(user.first_name)}\nID: <code>{user.id}</code>\nUsername: {username_text}",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                log.warning(f"Failed to send new-user notification: {e}")
+            
         _known_users_cache[user.id] = True
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning(f"New-user check failed for {user.id}: {e}")
 
 def build_welcome_text(first_name: str) -> str:
     question_count = len(ALL_QUESTIONS_MAP)
