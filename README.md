@@ -17,7 +17,7 @@ RatherX brings unparalleled interactive matchmaking and fast-paced gaming direct
 ### 🎮 Core Gameplay
 - **Rapid-Fire Engine:** Play random (`/next`) or spicy (`/nsfw`) questions instantly.
 - **17 Categories:** `/categories` opens a menu of 2,100+ questions with real human vote percentages, and **Next Question** stays in the chosen category.
-- **Dynamic Group Play:** In group chats, the first vote locks in a 15-second countdown timer! 
+- **Dynamic Group Play:** In group chats, the second vote starts a 15-second countdown, then everyone's picks are revealed.
 - **Inline Mode:** Type `@RatherX_Aclbot` in any chat to instantly beam a challenge to your friends. Add a category name (`@RatherX_Aclbot money`) to pick one. Your 3 most recently used categories show at the top (🕘). *Needs inline feedback enabled in @BotFather (`/setinlinefeedback`).*
 
 ### 🗂️ Categories
@@ -27,9 +27,9 @@ Questions live in `data/questions_<category>.json` and come from [Would_You_Rath
 
 ### 💞 Advanced Matchmaking
 Powered by our proprietary **Normalized Weighted Score** algorithm, the bot secretly learns how users vote and builds affinity maps in real-time.
-- **`/xcouple`:** View the server's Couple Board showing the top 5 most compatible pairs in the group.
+- **`/xcouple`:** View the Couple Board with the top 10 most compatible pairs: in this group, across all groups, or your own matches.
 - **`/mylove`:** Get a secret DM from the bot revealing your top 5 secret admirers in the group.
-- **`/compatibility @user`:** Run an on-demand scan between yourself and any other user.
+- **`/compatibility @user1 @user2`:** Run an on-demand scan between any two players in the group (usernames or user IDs).
 
 ### 🛠️ Admin & Support Ecosystem
 - **`/feedback` FSM System:** Users can submit ideas/bugs (text, photo, or video). Tickets are sent to the admin group with inline buttons (`[Fix]`, `[Ignore]`, `[Added]`) for instant triage.
@@ -110,27 +110,28 @@ Copy the `.env.example` file to `.env` and configure your credentials.
 | `BOT_TOKEN` | Your Telegram Bot Token. |
 | `SUPABASE_URL` | Your Supabase Project URL. |
 | `SUPABASE_KEY` | Your Supabase **secret** API key (`sb_secret_...`). Never use the publishable/anon key: the tables have RLS on and only the secret key can access them. |
-| `OWNER_ID` | Your Telegram User ID (Used to authorize `/broadcast`). |
-| `FEEDBACK_GROUP_ID` | The Chat ID where feedback tickets are sent. |
-| `FEEDBACK_TOPIC_ID` | The specific thread ID in the feedback group. |
-| `NOTIFICATION_LOG_GROUP` | The Chat ID where bot analytics/growth alerts are sent. |
-| `NOTIFICATION_LOG_TOPIC_ID` | The specific thread ID in the notifications group. |
-| `WEBHOOK_URL` | Your production HTTPS URL (e.g., `https://app.onrender.com`). **Leave blank for local testing!** |
-| `WEBHOOK_PATH` | The route to receive payloads (Default: `/webhook`). |
-| `WEBAPP_HOST` | Web server host (Default: `0.0.0.0`). |
-| `WEBAPP_PORT` | Web server port (Default: `8080`). |
+| `OWNER_ID` | Your Telegram User ID (authorizes `/broadcast`, `/alive` and ticket buttons). |
+| `FEEDBACK_GROUP_ID` | *Optional.* Chat ID where feedback tickets are sent. Unset turns `/feedback` off. |
+| `FEEDBACK_TOPIC_ID` | *Optional.* Topic (thread) ID in the feedback group. |
+| `NOTIFICATION_LOG_GROUP` | *Optional.* Chat ID for new-user and new-group alerts. Unset turns the alerts off. |
+| `NOTIFICATION_LOG_TOPIC_ID` | *Optional.* Topic (thread) ID in the alerts group. |
+| `WEBHOOK_URL` | **Required.** Public HTTPS URL of the server, e.g. `https://your-app.onrender.com`. |
+| `WEBHOOK_PATH` | Route Telegram posts updates to (Default: `/webhook`). |
+| `WEBHOOK_SECRET_TOKEN` | *Optional but recommended.* Random string Telegram sends with every update, so only Telegram can call the webhook. |
+| `PORT` | Web server port (Default: `8080`; Render sets it automatically). |
 
 ### 4. Running the Bot
 
-**Local Testing (No Webhook):**
-Ensure `WEBHOOK_URL` is blank in your `.env`.
+The bot runs as a webhook server, so Telegram must be able to reach it over HTTPS.
+
+**Production:** set the variables above in your host's dashboard (e.g. Render) and start `python main.py`. The bot listens on `PORT` and tells Telegram to send updates to `WEBHOOK_URL` + `WEBHOOK_PATH`.
+
+**Local testing:** expose your machine with an HTTPS tunnel (for example `cloudflared tunnel --url http://localhost:8080`), put the tunnel URL in `WEBHOOK_URL`, then:
 ```bash
 pip install -r requirements.txt
 python main.py
 ```
-
-**Production (Webhooks):**
-Set the `WEBHOOK_URL` in your host's environment dashboard. Deploy `main.py` using your host's standard Python web service configuration. The bot will automatically bind to port `8080` and instruct Telegram to stream traffic to your URL!
+Starting the bot points the webhook at this instance, so stop any other running copy first.
 
 ---
 
@@ -143,11 +144,14 @@ Set the `WEBHOOK_URL` in your host's environment dashboard. Deploy `main.py` usi
 | `/next` | 🎮 Game | Generates a random SFW question from all categories. |
 | `/categories` | 🎮 Game | Opens the category menu (17 categories). |
 | `/nsfw` | 🎮 Game | Generates an 18+ NSFW question. |
-| `/xcouple` | 💞 Social | Shows the top 5 most compatible pairs in the group. |
+| `/xcouple` | 💞 Social | Shows the top 10 most compatible pairs (this group, global, or your own matches). |
 | `/mylove` | 💞 Social | DM's the user their top 5 secret admirers in the group. |
-| `/compatibility @user` | 💞 Social | Scans compatibility between two specific users. |
+| `/compatibility @user1 @user2` | 💞 Social | Scans compatibility between two players in the group. |
 | `/feedback` / `.feedback` | 🛠️ Util | Opens the FSM to submit bugs or feature ideas. |
+| `/cancel` | 🛠️ Util | Cancels an open feedback ticket. |
 | `/broadcast` | 👑 Admin | *(Reply to a message)* Batch-forwards the message to all users/groups. |
+| `/alive` / `.alive` | 👑 Admin | Shows uptime, CPU/RAM, ping and user/group counts. |
+| `/add_alive` | 👑 Admin | *(Reply to a photo or video)* Sets the media shown with `/alive`. |
 
 ---
 
