@@ -100,6 +100,8 @@ Run the SQL queries found in `schema.sql` in your Supabase SQL Editor to generat
 
 Also run `migrations/002_category_history.sql` to add the `rather_category_history` table used for recently used categories.
 
+Finally, switch `SUPABASE_KEY` to the **secret** key everywhere the bot runs, then run `migrations/003_enable_rls.sql`. It turns on Row Level Security so the public key can no longer read or change your data. Run it in that order, or the bot will lose database access.
+
 ### 3. Environment Configuration
 Copy the `.env.example` file to `.env` and configure your credentials.
 
@@ -107,7 +109,7 @@ Copy the `.env.example` file to `.env` and configure your credentials.
 | -------- | ----------- |
 | `BOT_TOKEN` | Your Telegram Bot Token. |
 | `SUPABASE_URL` | Your Supabase Project URL. |
-| `SUPABASE_KEY` | Your Supabase `anon` / `publishable` API Key. |
+| `SUPABASE_KEY` | Your Supabase **secret** API key (`sb_secret_...`). Never use the publishable/anon key: the tables have RLS on and only the secret key can access them. |
 | `OWNER_ID` | Your Telegram User ID (Used to authorize `/broadcast`). |
 | `FEEDBACK_GROUP_ID` | The Chat ID where feedback tickets are sent. |
 | `FEEDBACK_TOPIC_ID` | The specific thread ID in the feedback group. |

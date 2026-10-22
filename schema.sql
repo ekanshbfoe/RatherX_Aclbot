@@ -51,3 +51,11 @@ CREATE TABLE rather_category_history (
     PRIMARY KEY (user_id, category)
 );
 CREATE INDEX idx_rather_category_history_recent ON rather_category_history(user_id, last_used_at DESC);
+
+-- Block the public API key: the bot connects with the secret key, which bypasses RLS
+ALTER TABLE rather_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rather_chat_mappings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rather_votes_global ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rather_votes_local ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rather_bot_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rather_category_history ENABLE ROW LEVEL SECURITY;
