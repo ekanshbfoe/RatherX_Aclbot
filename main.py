@@ -20,7 +20,6 @@ from handlers.commands.mylove import router as mylove_router
 from handlers.commands.compatibility import router as compatibility_router
 from handlers.commands.admin_broadcast import router as admin_broadcast_router
 from handlers.callbacks.vote import router as vote_router
-from handlers.callbacks.next_question import router as next_question_router
 from handlers.callbacks.xcouple_board import router as xcouple_board_router
 from handlers.inline import router as inline_router
 from handlers.events.notifications import router as notifications_router
@@ -75,7 +74,6 @@ def main():
     dp.include_router(admin_broadcast_router)
     
     dp.include_router(vote_router)
-    dp.include_router(next_question_router)
     dp.include_router(xcouple_board_router)
     
     dp.include_router(inline_router)

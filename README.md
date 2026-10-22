@@ -59,7 +59,6 @@ This bot has undergone a massive architectural overhaul for production-grade sca
 │   └── 📄 supabase_client.py   # Async Supabase Postgres client
 ├── 📁 handlers
 │   ├── 📁 callbacks            # Interactive Button Handlers
-│   │   ├── 📄 next_question.py
 │   │   ├── 📄 vote.py          # Fire-and-forget voting logic
 │   │   └── 📄 xcouple_board.py
 │   ├── 📁 commands             # Chat Commands
