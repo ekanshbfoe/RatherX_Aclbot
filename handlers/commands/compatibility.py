@@ -1,4 +1,5 @@
 import asyncio
+import re
 from aiogram import Router, types
 from aiogram.filters import Command
 from services.game_session import get_chat_instance, get_local_history_dict, calculate_specific_compatibility
@@ -12,10 +13,12 @@ async def resolve_user_id(target: str) -> int | None:
         return int(target)
     elif target.startswith('@'):
         username = target[1:]
-        if not supabase:
+        if not supabase or not re.fullmatch(r"\w{1,32}", username):
             return None
+        # Telegram usernames are case-insensitive; escape "_" so ILIKE matches it literally
+        pattern = username.replace("_", "\\_")
         res = await asyncio.to_thread(
-            lambda: supabase.table("rather_users").select("user_id").eq("username", username).execute()
+            lambda: supabase.table("rather_users").select("user_id").ilike("username", pattern).execute()
         )
         if res.data:
             return res.data[0]["user_id"]
