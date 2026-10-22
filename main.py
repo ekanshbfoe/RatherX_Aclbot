@@ -37,9 +37,9 @@ async def on_startup(bot: Bot):
     load_questions()
     asyncio.create_task(cleanup_stale_sessions())
     
-    logging.info(f"Setting webhook to: {WEBHOOK_URL}/webhook")
+    logging.info(f"Setting webhook to: {WEBHOOK_URL}{WEBHOOK_PATH}")
     await bot.set_webhook(
-        url=f"{WEBHOOK_URL}/webhook", 
+        url=f"{WEBHOOK_URL}{WEBHOOK_PATH}", 
         drop_pending_updates=True,
         allowed_updates=["message", "inline_query", "chosen_inline_result", "callback_query", "my_chat_member"],
         secret_token=WEBHOOK_SECRET or None
