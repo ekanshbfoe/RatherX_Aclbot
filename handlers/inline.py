@@ -3,6 +3,7 @@ from aiogram.types import InlineQueryResultArticle, InputTextMessageContent, Inl
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_random_question
 from database.categories import CATEGORIES, NSFW_CATEGORY, emoji_icon_url
+from services.category_history import record_category_use
 from utils.formatting import format_question_text
 
 router = Router()
@@ -76,3 +77,9 @@ async def inline_query_handler(inline_query: types.InlineQuery):
         is_personal=True,
         button=InlineQueryResultsButton(text="Would You Rather え", start_parameter="inline_promo")
     )
+
+@router.chosen_inline_result()
+async def chosen_inline_result_handler(chosen: types.ChosenInlineResult):
+    # Needs inline feedback turned on in @BotFather (/setinlinefeedback)
+    if chosen.result_id.startswith("cat_"):
+        await record_category_use(chosen.from_user.id, chosen.result_id[len("cat_"):])

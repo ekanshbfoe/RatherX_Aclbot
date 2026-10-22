@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.categories import CATEGORIES
 from handlers.commands.next import check_cooldown, send_question
+from services.category_history import record_category_use
 
 router = Router()
 
@@ -40,3 +41,4 @@ async def process_category(callback_query: types.CallbackQuery):
 
     await callback_query.answer()
     await send_question(callback_query.message, category)
+    await record_category_use(callback_query.from_user.id, category)
