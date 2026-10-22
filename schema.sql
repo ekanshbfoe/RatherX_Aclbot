@@ -42,3 +42,12 @@ CREATE TABLE rather_bot_settings (
 INSERT INTO rather_bot_settings (setting_key, setting_value) 
 VALUES ('alive_media_id', ''), ('alive_media_type', '') 
 ON CONFLICT DO NOTHING;
+
+-- Recently used categories per user (newest first in the inline list)
+CREATE TABLE rather_category_history (
+    user_id BIGINT NOT NULL,
+    category TEXT NOT NULL,
+    last_used_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, category)
+);
+CREATE INDEX idx_rather_category_history_recent ON rather_category_history(user_id, last_used_at DESC);
