@@ -5,7 +5,7 @@ import itertools
 from functools import wraps
 from cachetools import TTLCache
 from database.questions import get_question_by_id, ALL_QUESTIONS_MAP
-from database.supabase_client import supabase
+from database.supabase_client import supabase, fetch_all_rows
 from dataclasses import dataclass, field
 from typing import Set, Dict, Optional, Any
 
@@ -164,11 +164,12 @@ async def record_user_vote(user_id: int, user_name: str, question_id: str, vote_
 @with_retry(fallback_return={})
 async def get_global_history_dict() -> dict:
     if not supabase: return {}
-    res = await asyncio.to_thread(
-        lambda: supabase.table("rather_votes_global").select("user_id, question_id, vote_choice, rather_users(first_name, username)").limit(5000).execute()
+    rows = await asyncio.to_thread(
+        fetch_all_rows,
+        lambda: supabase.table("rather_votes_global").select("user_id, question_id, vote_choice, rather_users(first_name, username)").order("user_id").order("question_id")
     )
     history = {}
-    for row in res.data:
+    for row in rows:
         uid = row["user_id"]
         if uid not in history:
             u = row.get("rather_users") or {}
@@ -179,11 +180,12 @@ async def get_global_history_dict() -> dict:
 @with_retry(fallback_return={})
 async def get_local_history_dict(chat_instance: str) -> dict:
     if not supabase: return {}
-    res = await asyncio.to_thread(
-        lambda: supabase.table("rather_votes_local").select("user_id, question_id, vote_choice, rather_users(first_name, username)").eq("chat_instance", chat_instance).execute()
+    rows = await asyncio.to_thread(
+        fetch_all_rows,
+        lambda: supabase.table("rather_votes_local").select("user_id, question_id, vote_choice, rather_users(first_name, username)").eq("chat_instance", chat_instance).order("user_id").order("question_id")
     )
     history = {}
-    for row in res.data:
+    for row in rows:
         uid = row["user_id"]
         if uid not in history:
             u = row.get("rather_users") or {}

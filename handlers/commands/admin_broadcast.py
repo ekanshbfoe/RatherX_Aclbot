@@ -4,7 +4,7 @@ from aiogram import Router, types, Bot
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from config.settings import OWNER_ID
-from database.supabase_client import supabase
+from database.supabase_client import supabase, fetch_all_rows
 from services.game_session import track_task
 
 router = Router()
@@ -62,13 +62,13 @@ async def execute_broadcast(bot: Bot, from_chat_id: int, message_id: int, target
     
     try:
         if target in ["users", "all"]:
-            res = await asyncio.to_thread(lambda: supabase.table("rather_users").select("user_id").execute())
-            for row in res.data:
+            rows = await asyncio.to_thread(fetch_all_rows, lambda: supabase.table("rather_users").select("user_id").order("user_id"))
+            for row in rows:
                 targets.add(row["user_id"])
                 
         if target in ["groups", "all"]:
-            res = await asyncio.to_thread(lambda: supabase.table("rather_chat_mappings").select("chat_id").execute())
-            for row in res.data:
+            rows = await asyncio.to_thread(fetch_all_rows, lambda: supabase.table("rather_chat_mappings").select("chat_id").order("chat_id"))
+            for row in rows:
                 targets.add(row["chat_id"])
     except Exception as e:
         log.error(f"Broadcast DB fetch error: {e}")

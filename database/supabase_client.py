@@ -17,3 +17,17 @@ if SUPABASE_URL and SUPABASE_KEY:
         log.error(f"Failed to initialize Supabase client: {e}")
 else:
     log.warning("SUPABASE_URL or SUPABASE_KEY is missing from environment variables.")
+
+def fetch_all_rows(make_query, page_size: int = 1000) -> list:
+    """Reads every row of a query page by page (Supabase returns at most 1000 rows per request).
+
+    make_query must build a fresh, consistently ordered query each call. Blocking: run it in a thread.
+    """
+    rows = []
+    start = 0
+    while True:
+        page = make_query().range(start, start + page_size - 1).execute().data
+        if not page:
+            return rows
+        rows.extend(page)
+        start += len(page)
