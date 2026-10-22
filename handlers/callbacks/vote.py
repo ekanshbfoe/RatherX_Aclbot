@@ -44,12 +44,14 @@ async def resolve_game(game_id: str, message: types.Message | None, inline_messa
         show_stats=True,
         players_a=players_a,
         players_b=players_b,
-        is_nsfw=session.is_nsfw
+        is_nsfw=session.is_nsfw,
+        category=question.category
     )
 
-    # Add inline "Next Question" button for all games
+    # Add inline "Next Question" button for all games; it pre-fills the category so the next pick stays in it
+    next_query = "" if session.mode == "sfw" else session.mode
     builder = InlineKeyboardBuilder()
-    builder.button(text="➡️ Next Question", switch_inline_query_current_chat="")
+    builder.button(text="➡️ Next Question", switch_inline_query_current_chat=next_query)
         
     reply_markup = builder.as_markup()
         
@@ -77,6 +79,11 @@ async def process_vote(callback_query: types.CallbackQuery):
     question_id = data_parts[2]
     vote_choice = data_parts[3]
     
+    # Buttons on messages sent before the category update point to question IDs that no longer exist
+    if not get_question_by_id(question_id):
+        await callback_query.answer("This question has expired. Start a new one with /next!", show_alert=True)
+        return
+    
     # Determine unified game_id
     is_inline = callback_query.inline_message_id is not None
     if is_inline:
@@ -88,7 +95,7 @@ async def process_vote(callback_query: types.CallbackQuery):
     if not session:
         # Initialize session on the fly for inline queries or restarted bot cache misses
         is_nsfw = (category == "nsfw")
-        session = create_session(game_id, question_id, is_nsfw=is_nsfw)
+        session = create_session(game_id, question_id, is_nsfw=is_nsfw, mode=category)
         
     user_id = callback_query.from_user.id
     first_name = callback_query.from_user.first_name
@@ -163,7 +170,8 @@ async def process_vote(callback_query: types.CallbackQuery):
             question.option_blue,
             question.option_red,
             waiting_text=waiting_text,
-            is_nsfw=session.is_nsfw
+            is_nsfw=session.is_nsfw,
+            category=question.category
         )
         
         builder = InlineKeyboardBuilder()

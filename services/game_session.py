@@ -25,6 +25,7 @@ def track_task(coro):
 class GameSession:
     question_id: str
     is_nsfw: bool
+    mode: str = "sfw" # "sfw" (random) or a category key; decides what 'Next Question' offers
     created_at: float = field(default_factory=time.time)
     votes_a: Set[int] = field(default_factory=set) # User IDs for option blue
     votes_b: Set[int] = field(default_factory=set) # User IDs for option red
@@ -41,8 +42,8 @@ active_games: Dict[str, GameSession] = {}
 def get_session(game_id: str) -> Optional[GameSession]:
     return active_games.get(game_id)
 
-def create_session(game_id: str, question_id: str, is_nsfw: bool) -> GameSession:
-    session = GameSession(question_id=question_id, is_nsfw=is_nsfw)
+def create_session(game_id: str, question_id: str, is_nsfw: bool, mode: str = "sfw") -> GameSession:
+    session = GameSession(question_id=question_id, is_nsfw=is_nsfw, mode=mode)
     active_games[game_id] = session
     return session
 

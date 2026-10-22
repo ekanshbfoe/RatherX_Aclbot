@@ -50,13 +50,14 @@ async def send_question(message: types.Message, mode: str = RANDOM_MODE):
     text = format_question_text(
         question.option_blue,
         question.option_red,
-        is_nsfw=is_nsfw
+        is_nsfw=is_nsfw,
+        category=question.category
     )
 
     msg = await message.reply(text, reply_markup=builder.as_markup(), parse_mode="HTML")
 
     game_id = f"{message.chat.id}:{msg.message_id}"
-    create_session(game_id, question.id, is_nsfw=is_nsfw)
+    create_session(game_id, question.id, is_nsfw=is_nsfw, mode=mode)
 
 @router.message(Command("next"))
 async def cmd_next(message: types.Message):

@@ -2,6 +2,7 @@ import html
 import re
 from aiogram.exceptions import TelegramBadRequest
 import logging
+from database.categories import category_label
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ def format_question_text(option_a: str, option_b: str,
                          show_stats: bool = False, 
                          players_a: list = None, players_b: list = None, 
                          waiting_text: str = "",
-                         is_nsfw: bool = False) -> str:
+                         is_nsfw: bool = False,
+                         category: str = None) -> str:
     """Formats the question message text."""
     # Ensure lists are instantiated
     if players_a is None: players_a = []
@@ -25,7 +27,12 @@ def format_question_text(option_a: str, option_b: str,
     option_a = html.escape(option_a)
     option_b = html.escape(option_b)
     
-    text = "<b>[18+] Would you rather...</b>\n\n" if is_nsfw else "<b>Would you rather...</b>\n\n"
+    if is_nsfw:
+        text = "<b>[18+] Would you rather...</b>\n\n"
+    elif category:
+        text = f"<b>Would you rather...</b>  ·  <i>{html.escape(category_label(category))}</i>\n\n"
+    else:
+        text = "<b>Would you rather...</b>\n\n"
     
     if show_stats:
         total_votes = votes_a + votes_b
