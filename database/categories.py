@@ -24,13 +24,22 @@ NSFW_CATEGORY = "nsfw"
 
 _LABELS = {key: f"{emoji} {label}" for key, emoji, label in CATEGORIES}
 
-# Twemoji PNGs on jsDelivr, used as inline result icons (Telegram needs an image URL, not an emoji)
-_TWEMOJI_BASE = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/72x72"
+# Microsoft Fluent 3D emoji PNGs on jsDelivr, used as inline result icons
+# (Telegram needs an image URL, not an emoji). Pinned to a commit so the images never change.
+_FLUENT_BASE = "https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets"
+_FLUENT_NAMES = {
+    "🎲": "Game die", "🤔": "Thinking face", "💰": "Money bag", "🎬": "Clapper board",
+    "🤢": "Nauseated face", "🏕": "Camping", "🎓": "Graduation cap", "💬": "Speech balloon",
+    "😈": "Smiling face with horns", "🍕": "Pizza", "🏆": "Trophy", "📅": "Calendar",
+    "🔥": "Fire", "🔮": "Crystal ball", "🌀": "Cyclone", "💖": "Sparkling heart",
+    "⏳": "Hourglass not done", "🌶": "Hot pepper",
+}
 
 def emoji_icon_url(emoji: str) -> str:
-    """Returns the Twemoji image URL for an emoji, e.g. 💰 -> .../1f4b0.png"""
-    codepoints = "-".join(f"{ord(char):x}" for char in emoji if char != "\ufe0f")
-    return f"{_TWEMOJI_BASE}/{codepoints}.png"
+    """Returns the Fluent 3D image URL for an emoji, e.g. 💰 -> .../Money%20bag/3D/money_bag_3d.png"""
+    name = _FLUENT_NAMES[emoji]
+    file_name = name.lower().replace(" ", "_")
+    return f"{_FLUENT_BASE}/{name.replace(' ', '%20')}/3D/{file_name}_3d.png"
 
 def category_label(key: str) -> str:
     """Returns the display label (emoji + name) for a category key."""
