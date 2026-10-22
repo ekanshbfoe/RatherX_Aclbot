@@ -14,6 +14,10 @@ class FeedbackStates(StatesGroup):
 
 @router.message(Command("feedback", prefix="/."))
 async def cmd_feedback(message: types.Message, state: FSMContext):
+    if FEEDBACK_GROUP_ID is None:
+        await message.reply("⚠️ Feedback isn't set up on this bot yet.")
+        return
+    
     builder = InlineKeyboardBuilder()
     builder.button(text="🐞 Report Bug", callback_data="feedback:bug")
     builder.button(text="💡 Request Feature", callback_data="feedback:feature")

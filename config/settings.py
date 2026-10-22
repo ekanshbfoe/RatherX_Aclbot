@@ -15,12 +15,17 @@ if not BOT_TOKEN:
 if not _owner_id_str:
     sys.exit("FATAL: OWNER_ID must be set as an environment variable.")
 
+def _optional_int(name: str) -> int | None:
+    value = os.getenv(name)
+    return int(value) if value else None
+
 OWNER_ID = int(_owner_id_str)
-FEEDBACK_GROUP_ID = int(os.getenv("FEEDBACK_GROUP_ID", "-1003049612396"))
-FEEDBACK_TOPIC_ID = int(os.getenv("FEEDBACK_TOPIC_ID", "21"))
-NOTIFICATION_LOG_GROUP = int(os.getenv("NOTIFICATION_LOG_GROUP", "-1003049612396"))
-NOTIFICATION_LOG_TOPIC_ID = int(os.getenv("NOTIFICATION_LOG_TOPIC_ID", "18"))
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
+# Optional: when unset, /feedback and the admin alerts are turned off
+FEEDBACK_GROUP_ID = _optional_int("FEEDBACK_GROUP_ID")
+FEEDBACK_TOPIC_ID = _optional_int("FEEDBACK_TOPIC_ID")
+NOTIFICATION_LOG_GROUP = _optional_int("NOTIFICATION_LOG_GROUP")
+NOTIFICATION_LOG_TOPIC_ID = _optional_int("NOTIFICATION_LOG_TOPIC_ID")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "").rstrip("/")
 WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/webhook")
 WEBAPP_HOST = os.getenv("WEBAPP_HOST", "0.0.0.0")
 WEBAPP_PORT = int(os.getenv("WEBAPP_PORT", "8080"))

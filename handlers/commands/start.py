@@ -36,16 +36,17 @@ async def process_new_user(user: types.User, bot: Bot):
                 ).execute()
             )
             
-            username_text = f"@{html.escape(user.username)}" if user.username else "—"
-            try:
-                await bot.send_message(
-                    chat_id=NOTIFICATION_LOG_GROUP, 
-                    message_thread_id=NOTIFICATION_LOG_TOPIC_ID,
-                    text=f"👤 <b>New User Started Bot!</b>\nName: {html.escape(user.first_name)}\nID: <code>{user.id}</code>\nUsername: {username_text}",
-                    parse_mode="HTML"
-                )
-            except Exception as e:
-                log.warning(f"Failed to send new-user notification: {e}")
+            if NOTIFICATION_LOG_GROUP is not None:
+                username_text = f"@{html.escape(user.username)}" if user.username else "—"
+                try:
+                    await bot.send_message(
+                        chat_id=NOTIFICATION_LOG_GROUP, 
+                        message_thread_id=NOTIFICATION_LOG_TOPIC_ID,
+                        text=f"👤 <b>New User Started Bot!</b>\nName: {html.escape(user.first_name)}\nID: <code>{user.id}</code>\nUsername: {username_text}",
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    log.warning(f"Failed to send new-user notification: {e}")
             
         _known_users_cache[user.id] = True
     except Exception as e:

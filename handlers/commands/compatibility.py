@@ -44,7 +44,7 @@ async def cmd_compatibility(message: types.Message):
     target_args = [p for p in parts[1:] if p.startswith('@') or p.isdigit()]
     
     if len(target_args) != 2:
-        await processing_msg.edit_text("⚠️ Please provide exactly two users (usernames or IDs). Usage: `/compatibility @user1 784548961`", parse_mode="Markdown")
+        await processing_msg.edit_text("⚠️ Please provide exactly two users (usernames or IDs). Usage: `/compatibility @user1 123456789`", parse_mode="Markdown")
         return
         
     target1, target2 = target_args

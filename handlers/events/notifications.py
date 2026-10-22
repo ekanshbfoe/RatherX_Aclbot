@@ -9,6 +9,9 @@ log = logging.getLogger(__name__)
 
 @router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> (MEMBER | ADMINISTRATOR)))
 async def bot_added_to_group(event: types.ChatMemberUpdated, bot: Bot):
+    if NOTIFICATION_LOG_GROUP is None:
+        return
+    
     chat = event.chat
     user = event.from_user
     

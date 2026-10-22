@@ -37,10 +37,9 @@ async def on_startup(bot: Bot):
     load_questions()
     asyncio.create_task(cleanup_stale_sessions())
     
-    webhook_url = os.getenv("WEBHOOK_URL", "https://ratherx-aclbot.onrender.com")
-    logging.info(f"Setting webhook to: {webhook_url}/webhook")
+    logging.info(f"Setting webhook to: {WEBHOOK_URL}/webhook")
     await bot.set_webhook(
-        url=f"{webhook_url}/webhook", 
+        url=f"{WEBHOOK_URL}/webhook", 
         drop_pending_updates=True,
         allowed_updates=["message", "inline_query", "chosen_inline_result", "callback_query", "my_chat_member"],
         secret_token=WEBHOOK_SECRET or None
@@ -52,6 +51,9 @@ async def on_shutdown(bot: Bot):
 def main():
     if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or not BOT_TOKEN:
         logging.error("Please set your BOT_TOKEN in the .env file")
+        return
+    if not WEBHOOK_URL:
+        logging.error("Please set WEBHOOK_URL (your public HTTPS URL, e.g. https://your-app.onrender.com)")
         return
 
     session = AiohttpSession(
