@@ -3,7 +3,7 @@ from aiogram.types import InlineQueryResultArticle, InputTextMessageContent, Inl
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from database.questions import get_random_question
 from database.categories import CATEGORIES, NSFW_CATEGORY, emoji_icon_url
-from services.category_history import record_category_use
+from services.category_history import get_recent_categories, record_category_use
 from utils.formatting import format_question_text
 
 router = Router()
@@ -59,10 +59,16 @@ async def inline_query_handler(inline_query: types.InlineQuery):
     matches = match_categories(inline_query.query)
 
     candidates = []
+    recent = []
     if not matches:
-        # Empty or unmatched query: a random pick first, then every category so people can discover them
+        # Empty or unmatched query: the user's recent categories, a random pick, then every other category
+        recent_keys = await get_recent_categories(inline_query.from_user.id)
+        by_key = {key: (key, emoji, label) for key, emoji, label in CATEGORIES}
+        recent = [by_key[key] for key in recent_keys if key in by_key]
+        for key, emoji, label in recent:
+            candidates.append(build_article(f"cat_{key}", key, f"🕘 {emoji} {label}", emoji))
         candidates.append(build_article("article_sfw", "sfw", "🎲 Random Question", "🎲"))
-        matches = CATEGORIES
+        matches = [category for category in CATEGORIES if category not in recent]
 
     # One article per category, e.g. "@RatherX_Aclbot money" shows only Money
     for key, emoji, label in matches:
