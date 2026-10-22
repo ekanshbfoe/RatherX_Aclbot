@@ -18,7 +18,7 @@ RatherX brings unparalleled interactive matchmaking and fast-paced gaming direct
 - **Rapid-Fire Engine:** Play random (`/next`) or spicy (`/nsfw`) questions instantly.
 - **17 Categories:** `/categories` opens a menu of 2,100+ questions with real human vote percentages, and **Next Question** stays in the chosen category.
 - **Dynamic Group Play:** In group chats, the first vote locks in a 15-second countdown timer! 
-- **Inline Mode:** Type `@RatherGameBot` in any chat to instantly beam a challenge to your friends. Add a category name (`@RatherGameBot money`) to pick one.
+- **Inline Mode:** Type `@RatherX_Aclbot` in any chat to instantly beam a challenge to your friends. Add a category name (`@RatherX_Aclbot money`) to pick one.
 
 ### 🗂️ Categories
 🤔 Daily · 💰 Money · 🎬 Celebrity · 🤢 Gross · 🏕 Survival · 🎓 School · 💬 Social · 😈 Deal with the Devil · 🍕 Food · 🏆 Sports · 📅 Normal · 🔥 Extreme · 🔮 Fantasy · 🌀 Hard · 💖 Love Life · ⏳ Time Travel · 🌶 NSFW

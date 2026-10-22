@@ -55,7 +55,7 @@ async def inline_query_handler(inline_query: types.InlineQuery):
     matches = match_categories(inline_query.query)
 
     if matches:
-        # One article per matching category, e.g. "@RatherGameBot money"
+        # One article per matching category, e.g. "@RatherX_Aclbot money"
         candidates = [
             build_article(f"cat_{key}", key, f"{emoji} {label}", f"Play a {label} question")
             for key, emoji, label in matches
