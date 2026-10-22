@@ -5,7 +5,7 @@ from aiogram import Router, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from database.supabase_client import supabase
-from config.settings import OWNER_ID
+from config.settings import OWNER_ID, BOOT_TIME
 
 router = Router()
 
@@ -71,8 +71,7 @@ async def cmd_alive(message: types.Message):
     ping_ms = int((time.time() - message.date.timestamp()) * 1000)
     
     # Get Uptime
-    import main
-    uptime_seconds = time.time() - main.BOOT_TIME
+    uptime_seconds = time.time() - BOOT_TIME
     uptime_string = get_uptime_string(uptime_seconds)
     
     # System Metrics (Non-blocking CPU reading)

@@ -1,8 +1,11 @@
 import os
 import sys
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
+
+BOOT_TIME = time.time()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 _owner_id_str = os.getenv("OWNER_ID")
