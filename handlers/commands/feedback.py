@@ -1,3 +1,4 @@
+import html
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command
 from aiogram.fsm.state import State, StatesGroup
@@ -58,13 +59,13 @@ async def process_feedback_content(message: types.Message, state: FSMContext, bo
     
     text = (
         f"[{category}] (#{ticket_id})\n"
-        f"From: {message.from_user.first_name} (<code>{message.from_user.id}</code>)\n\n"
+        f"From: {html.escape(message.from_user.first_name)} (<code>{message.from_user.id}</code>)\n\n"
     )
     
     if message.text:
-        text += message.text
+        text += html.escape(message.text)
     elif message.caption:
-        text += message.caption
+        text += html.escape(message.caption)
         
     builder = InlineKeyboardBuilder()
     if category == "BUG":
@@ -139,15 +140,16 @@ async def process_admin_ticket(callback_query: types.CallbackQuery):
         await callback_query.answer("Ticket ignored & deleted.")
         return
         
-    admin_name = callback_query.from_user.first_name
+    admin_name = html.escape(callback_query.from_user.first_name)
     action_word = "Fixed" if action == "fix" else "Added"
     
-    # Extract original text/caption
+    # Rebuild the original text/caption as HTML (keeps its formatting and escapes user text)
+    original = callback_query.message.html_text
     if callback_query.message.text:
-        new_text = callback_query.message.text + f"\n\n✨ {action_word} by {admin_name}"
+        new_text = original + f"\n\n✨ {action_word} by {admin_name}"
         await callback_query.message.edit_text(new_text, reply_markup=None, parse_mode="HTML")
     elif callback_query.message.caption:
-        new_caption = callback_query.message.caption + f"\n\n✨ {action_word} by {admin_name}"
+        new_caption = original + f"\n\n✨ {action_word} by {admin_name}"
         await callback_query.message.edit_caption(caption=new_caption, reply_markup=None, parse_mode="HTML")
         
     await callback_query.answer(f"Ticket marked as {action_word}.")
