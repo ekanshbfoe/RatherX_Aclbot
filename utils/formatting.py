@@ -51,7 +51,7 @@ def format_question_text(option_a: str, option_b: str,
         text += f"🔴 {option_b}\n\n"
         
     if waiting_text:
-        text += f"<i>{waiting_text}</i>"
+        text += f"<i>{html.escape(waiting_text)}</i>" # Contains player names
     elif not show_stats:
         text += "Select your answer:"
         
