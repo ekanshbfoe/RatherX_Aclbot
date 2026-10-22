@@ -8,14 +8,23 @@ router = Router()
 
 _CATEGORY_KEYS = {key for key, _, _ in CATEGORIES}
 
-@router.message(Command("categories"))
-async def cmd_categories(message: types.Message):
+async def send_categories_menu(message: types.Message):
     builder = InlineKeyboardBuilder()
     for key, emoji, label in CATEGORIES:
         builder.button(text=f"{emoji} {label}", callback_data=f"cat:{key}")
     builder.adjust(3)
 
     await message.reply("🎯 <b>Pick a category:</b>", reply_markup=builder.as_markup(), parse_mode="HTML")
+
+@router.message(Command("categories"))
+async def cmd_categories(message: types.Message):
+    await send_categories_menu(message)
+
+@router.callback_query(lambda c: c.data == "menu:categories")
+async def process_categories_button(callback_query: types.CallbackQuery):
+    # "🗂 Categories" button on the /start message
+    await callback_query.answer()
+    await send_categories_menu(callback_query.message)
 
 @router.callback_query(lambda c: c.data and c.data.startswith('cat:'))
 async def process_category(callback_query: types.CallbackQuery):
