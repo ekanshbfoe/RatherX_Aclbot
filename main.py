@@ -14,6 +14,7 @@ from handlers.commands.help import router as help_router
 from handlers.commands.feedback import router as feedback_router
 from handlers.commands.next import router as next_router
 from handlers.commands.nsfw import router as nsfw_router
+from handlers.commands.categories import router as categories_router
 from handlers.commands.xcouple import router as xcouple_router
 from handlers.commands.mylove import router as mylove_router
 from handlers.commands.compatibility import router as compatibility_router
@@ -66,6 +67,7 @@ def main():
     dp.include_router(feedback_router)
     dp.include_router(next_router)
     dp.include_router(nsfw_router)
+    dp.include_router(categories_router)
     dp.include_router(xcouple_router)
     dp.include_router(mylove_router)
     dp.include_router(compatibility_router)
