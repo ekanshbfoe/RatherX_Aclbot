@@ -18,7 +18,7 @@ RatherX brings unparalleled interactive matchmaking and fast-paced gaming direct
 - **Rapid-Fire Engine:** Play random (`/next`) or spicy (`/nsfw`) questions instantly.
 - **17 Categories:** `/categories` opens a menu of 2,100+ questions with real human vote percentages, and **Next Question** stays in the chosen category.
 - **Dynamic Group Play:** In group chats, the first vote locks in a 15-second countdown timer! 
-- **Inline Mode:** Type `@RatherX_Aclbot` in any chat to instantly beam a challenge to your friends. Add a category name (`@RatherX_Aclbot money`) to pick one.
+- **Inline Mode:** Type `@RatherX_Aclbot` in any chat to instantly beam a challenge to your friends. Add a category name (`@RatherX_Aclbot money`) to pick one. Your 3 most recently used categories show at the top (🕘). *Needs inline feedback enabled in @BotFather (`/setinlinefeedback`).*
 
 ### 🗂️ Categories
 🤔 Daily · 💰 Money · 🎬 Celebrity · 🤢 Gross · 🏕 Survival · 🎓 School · 💬 Social · 😈 Deal with the Devil · 🍕 Food · 🏆 Sports · 📅 Normal · 🔥 Extreme · 🔮 Fantasy · 🌀 Hard · 💖 Love Life · ⏳ Time Travel · 🌶 NSFW
@@ -98,6 +98,8 @@ This bot has undergone a massive architectural overhaul for production-grade sca
 Run the SQL queries found in `schema.sql` in your Supabase SQL Editor to generate the `rather_users`, `rather_votes_local`, `rather_votes_global`, and `rather_chat_mappings` tables.
 
 **Upgrading an existing database from the old sfw/nsfw question sets?** Run `migrations/001_category_ids.sql` once, *before* deploying, so existing votes move to the new category question IDs. It refuses to run twice.
+
+Also run `migrations/002_category_history.sql` to add the `rather_category_history` table used for recently used categories.
 
 ### 3. Environment Configuration
 Copy the `.env.example` file to `.env` and configure your credentials.
