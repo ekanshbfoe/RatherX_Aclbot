@@ -7,7 +7,7 @@ from utils.formatting import format_question_text
 
 router = Router()
 
-def build_article(article_id: str, mode: str, title: str, description: str):
+def build_article(article_id: str, mode: str, title: str):
     """Builds one inline result holding a random question for the given mode ("sfw" = random SFW)."""
     if mode == "sfw":
         question = get_random_question(nsfw=False)
@@ -31,7 +31,7 @@ def build_article(article_id: str, mode: str, title: str, description: str):
     return InlineQueryResultArticle(
         id=article_id,
         title=title,
-        description=description,
+        description=question.question, # Preview of the exact question that will be sent
         input_message_content=InputTextMessageContent(
             message_text=text,
             parse_mode="HTML"
@@ -54,18 +54,16 @@ def match_categories(query: str) -> list:
 async def inline_query_handler(inline_query: types.InlineQuery):
     matches = match_categories(inline_query.query)
 
-    if matches:
-        # One article per matching category, e.g. "@RatherX_Aclbot money"
-        candidates = [
-            build_article(f"cat_{key}", key, f"{emoji} {label}", f"Play a {label} question")
-            for key, emoji, label in matches
-        ]
-    else:
-        # Default: random SFW question and 18+ question
-        candidates = [
-            build_article("article_sfw", "sfw", "Get Question", "Play a standard Would You Rather question"),
-            build_article("article_nsfw", NSFW_CATEGORY, "Get Question (18+)", "Play an NSFW 18+ question"),
-        ]
+    candidates = []
+    if not matches:
+        # Empty or unmatched query: a random pick first, then every category so people can discover them
+        candidates.append(build_article("article_sfw", "sfw", "🎲 Random Question"))
+        matches = CATEGORIES
+
+    # One article per category, e.g. "@RatherX_Aclbot money" shows only Money
+    for key, emoji, label in matches:
+        title = f"{emoji} {label} (18+)" if key == NSFW_CATEGORY else f"{emoji} {label}"
+        candidates.append(build_article(f"cat_{key}", key, title))
     results = [article for article in candidates if article]
 
     # cache_time=0 and is_personal=True ensures they get fresh random questions every time they query
