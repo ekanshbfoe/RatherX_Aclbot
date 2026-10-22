@@ -8,7 +8,8 @@ async def cmd_help(message: types.Message):
     text = (
         "<b>『 RatherX Game Panel 👑 』</b>\n\n"
         "<b>🎮 Play the Game</b>\n"
-        "• <code>/next</code> - Get a standard question.\n"
+        "• <code>/next</code> - Get a random question.\n"
+        "• <code>/categories</code> - Pick from 17 categories.\n"
         "• <code>/nsfw</code> - Get an 18+ question.\n\n"
         "<b>💞 Social & Matchmaking</b>\n"
         "• <code>/xcouple</code> - View the Couple Board.\n"

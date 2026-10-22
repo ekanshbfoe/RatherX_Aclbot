@@ -15,9 +15,15 @@
 RatherX brings unparalleled interactive matchmaking and fast-paced gaming directly to Telegram chats.
 
 ### 🎮 Core Gameplay
-- **Rapid-Fire Engine:** Play standard (`/next`) or spicy (`/nsfw`) questions instantly.
+- **Rapid-Fire Engine:** Play random (`/next`) or spicy (`/nsfw`) questions instantly.
+- **17 Categories:** `/categories` opens a menu of 2,100+ questions with real human vote percentages, and **Next Question** stays in the chosen category.
 - **Dynamic Group Play:** In group chats, the first vote locks in a 15-second countdown timer! 
-- **Inline Mode:** Type `@RatherGameBot` in any chat to instantly beam a challenge to your friends.
+- **Inline Mode:** Type `@RatherGameBot` in any chat to instantly beam a challenge to your friends. Add a category name (`@RatherGameBot money`) to pick one.
+
+### 🗂️ Categories
+🤔 Daily · 💰 Money · 🎬 Celebrity · 🤢 Gross · 🏕 Survival · 🎓 School · 💬 Social · 😈 Deal with the Devil · 🍕 Food · 🏆 Sports · 📅 Normal · 🔥 Extreme · 🔮 Fantasy · 🌀 Hard · 💖 Love Life · ⏳ Time Travel · 🌶 NSFW
+
+Questions live in `data/questions_<category>.json` and come from [Would_You_Rather_questions_with_human_votes](https://github.com/ekanshbfoe/Would_You_Rather_questions_with_human_votes). To add a category, drop in a new file with the same schema and add it to `database/categories.py`.
 
 ### 💞 Advanced Matchmaking
 Powered by our proprietary **Normalized Weighted Score** algorithm, the bot secretly learns how users vote and builds affinity maps in real-time.
@@ -46,8 +52,10 @@ This bot has undergone a massive architectural overhaul for production-grade sca
 📦 RatherX_Aclbot
 ├── 📁 config
 │   └── 📄 settings.py          # Centralized Environment Variables
+├── 📁 data                     # questions_<category>.json (17 files)
 ├── 📁 database
-│   ├── 📄 questions.py         # Static question banks
+│   ├── 📄 categories.py        # Category list (key, emoji, label)
+│   ├── 📄 questions.py         # Loads question banks by category
 │   └── 📄 supabase_client.py   # Async Supabase Postgres client
 ├── 📁 handlers
 │   ├── 📁 callbacks            # Interactive Button Handlers
@@ -56,6 +64,7 @@ This bot has undergone a massive architectural overhaul for production-grade sca
 │   │   └── 📄 xcouple_board.py
 │   ├── 📁 commands             # Chat Commands
 │   │   ├── 📄 admin_broadcast.py
+│   │   ├── 📄 categories.py    # /categories menu
 │   │   ├── 📄 compatibility.py
 │   │   ├── 📄 feedback.py      # FSM Ticket System
 │   │   ├── 📄 help.py
@@ -69,6 +78,7 @@ This bot has undergone a massive architectural overhaul for production-grade sca
 │   └── 📄 inline.py            # Inline Query Matchmaking
 ├── 📁 services
 │   └── 📄 game_session.py      # Matchmaking Math & DB Fallbacks
+├── 📁 migrations               # One-off Supabase SQL migrations
 ├── 📄 .env.example
 ├── 📄 main.py                  # aiohttp Webhook Entrypoint
 ├── 📄 requirements.txt
@@ -86,6 +96,8 @@ This bot has undergone a massive architectural overhaul for production-grade sca
 
 ### 2. Database Setup
 Run the SQL queries found in `schema.sql` in your Supabase SQL Editor to generate the `rather_users`, `rather_votes_local`, `rather_votes_global`, and `rather_chat_mappings` tables.
+
+**Upgrading an existing database from the old sfw/nsfw question sets?** Run `migrations/001_category_ids.sql` once, *before* deploying, so existing votes move to the new category question IDs. It refuses to run twice.
 
 ### 3. Environment Configuration
 Copy the `.env.example` file to `.env` and configure your credentials.
@@ -125,7 +137,8 @@ Set the `WEBHOOK_URL` in your host's environment dashboard. Deploy `main.py` usi
 |---------|------|-------------|
 | `/start` | 👤 User | Initializes the bot and sends the welcome menu. |
 | `/help` / `.help` | 👤 User | Shows the beautifully formatted command list. |
-| `/next` | 🎮 Game | Generates a standard SFW question. |
+| `/next` | 🎮 Game | Generates a random SFW question from all categories. |
+| `/categories` | 🎮 Game | Opens the category menu (17 categories). |
 | `/nsfw` | 🎮 Game | Generates an 18+ NSFW question. |
 | `/xcouple` | 💞 Social | Shows the top 5 most compatible pairs in the group. |
 | `/mylove` | 💞 Social | DM's the user their top 5 secret admirers in the group. |
